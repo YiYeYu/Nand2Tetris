@@ -29,11 +29,12 @@ CHIP Memory {
     // address[14..13] 0? -> 16K, 10 -> 8k(screen, 0x4000-0x5FFF), 11 - 8k(keyboard, 0x6000-...)
 
     DMux4Way(in= load, sel= address[13..14], a= load00, b= load01, c= load10, d= load11);
+    Or(a= load00, b= load01, out= loadmem);
 
-    RAM16K(in= in, load= load00, address= address[0..13], out= out00);
-    RAM4K(in= in, load= load01, address= address[0..11], out= out01);
-    RAM4K(in= in, load= load10, address= address[0..11], out= out10);
-    Register(in= in, load= load11, out= out11);
+    RAM16K(in= in, load= loadmem, address= address[0..13], out= outmem);
+    Screen(in= in, load= load10, address= address[0..12], out= outscreen);
+    Keyboard(out= kout);
+    //Register(in= kout, load= load11, out= out11);
 
-    Mux4Way16(a= out00, b= out01, c= out10, d= out11, sel= address[13..14], out= out);
+    Mux4Way16(a= outmem, b= outmem, c= outscreen, d= kout, sel= address[13..14], out= out);
 }
