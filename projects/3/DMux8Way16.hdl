@@ -1,0 +1,43 @@
+// This file is part of www.nand2tetris.org
+// and the book "The Elements of Computing Systems"
+// by Nisan and Schocken, MIT Press.
+/**
+ * 8-way demultiplexor:
+ * [a, b, c, d, e, f, g, h] = [in, 0,  0,  0,  0,  0,  0,  0] if sel = 000
+ *                            [0, in,  0,  0,  0,  0,  0,  0] if sel = 001
+ *                            [0,  0, in,  0,  0,  0,  0,  0] if sel = 010
+ *                            [0,  0,  0, in,  0,  0,  0,  0] if sel = 011
+ *                            [0,  0,  0,  0, in,  0,  0,  0] if sel = 100
+ *                            [0,  0,  0,  0,  0, in,  0,  0] if sel = 101
+ *                            [0,  0,  0,  0,  0,  0, in,  0] if sel = 110
+ *                            [0,  0,  0,  0,  0,  0,  0, in] if sel = 111
+ */
+CHIP DMux8Way16 {
+    IN in[16], sel[3];
+    OUT a[16], b[16], c[16], d[16], e[16], f[16], g[16], h[16];
+
+    PARTS:
+    //// Replace this comment with your code.
+    Not(in= sel[0], out= nsel0);
+    Not(in= sel[1], out= nsel1);
+    Not(in= sel[2], out= nsel2);
+
+    And(a= nsel1, b= nsel0, out= sel00);
+    And(a= nsel1, b= sel[0], out= sel01);
+    And(a= sel[1], b= nsel0, out= sel10);
+    And(a= sel[1], b= sel[0], out= sel11);
+
+    And(a= sel[2], b= sel00, out= sel100);
+    And(a= sel[2], b= sel01, out= sel101);
+    And(a= sel[2], b= sel10, out= sel110);
+    And(a= sel[2], b= sel11, out= sel111);
+
+    Mux16(a= false, b= in, sel= sel00, out= a);
+    Mux16(a= false, b= in, sel= sel01, out= b);
+    Mux16(a= false, b= in, sel= sel10, out= c);
+    Mux16(a= false, b= in, sel= sel11, out= d);
+    Mux16(a= false, b= in, sel= sel100, out= e);
+    Mux16(a= false, b= in, sel= sel101, out= f);
+    Mux16(a= false, b= in, sel= sel110, out= g);
+    Mux16(a= false, b= in, sel= sel111, out= h);
+}
