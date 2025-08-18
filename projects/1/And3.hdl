@@ -2,16 +2,15 @@
 // and the book "The Elements of Computing Systems"
 // by Nisan and Schocken, MIT Press.
 /**
- * Or gate:
- * if (a or b) out = 1, else out = 0 
+ * And gate:
+ * if (a and b and c) out = 1, else out = 0 
  */
-CHIP Or {
-    IN a, b;
+CHIP And3 {
+    IN a, b, c;
     OUT out;
-
+    
     PARTS:
     //// Replace this comment with your code.
-    Nand(a= a, b= a, out= na);
-    Nand(a= b, b= b, out= nb);
-    Nand(a= na, b= nb, out= out);
+    And(a= a, b= b, out= d);
+    And(a= d, b= c, out= out);
 }

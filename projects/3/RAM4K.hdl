@@ -13,26 +13,4 @@ CHIP RAM4K {
 
     PARTS:
     //// Replace this comment with your code.
-
-    DMux8Way(in= true, sel= address[9..11], a= sel000, b= sel001, c= sel010, d= sel011, e= sel100, f= sel101, g= sel110, h= sel111);
-
-    And(a= sel000, b= load, out= load000);
-    And(a= sel001, b= load, out= load001);
-    And(a= sel010, b= load, out= load010);
-    And(a= sel011, b= load, out= load011);
-    And(a= sel100, b= load, out= load100);
-    And(a= sel101, b= load, out= load101);
-    And(a= sel110, b= load, out= load110);
-    And(a= sel111, b= load, out= load111);
-
-    RAM512(in= in, load= load000, address= address[0..8], out= o01);
-    RAM512(in= in, load= load001, address= address[0..8], out= o11);
-    RAM512(in= in, load= load010, address= address[0..8], out= o21);
-    RAM512(in= in, load= load011, address= address[0..8], out= o31);
-    RAM512(in= in, load= load100, address= address[0..8], out= o41);
-    RAM512(in= in, load= load101, address= address[0..8], out= o51);
-    RAM512(in= in, load= load110, address= address[0..8], out= o61);
-    RAM512(in= in, load= load111, address= address[0..8], out= o71);
-    
-    Mux8Way16(a= o01, b= o11, c= o21, d= o31, e= o41, f= o51, g= o61, h= o71, sel= address[9..11], out= out);
 }

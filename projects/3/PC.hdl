@@ -14,15 +14,4 @@ CHIP PC {
     
     PARTS:
     //// Replace this comment with your code.
-    Or(a= load, b= reset, out= loadorreset);
-    Or(a= loadorreset, b= inc, out= realload);
-
-    Inc16(in= or, out= orinc);
-    Mux16(a= or, b= orinc, sel= inc, out= incedin);
-    Mux16(a= incedin, b= in, sel= load, out= loadin);
-    Mux16(a= loadin, b= false, sel= reset, out= realin);
-
-    Register(in= realin, load= realload, out= or);
-
-    Or16(a= or, b= false, out= out);
 }

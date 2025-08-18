@@ -1,0 +1,32 @@
+// This file is part of www.nand2tetris.org
+// and the book "The Elements of Computing Systems"
+// by Nisan and Schocken, MIT Press.
+/**
+ * 16-way 1-bit multiplexor:
+ * out = a[sel]
+ */
+CHIP Mux16Way {
+    IN in[16], sel[4];
+    OUT out;
+
+    PARTS:
+    //// Replace this comment with your code.
+    Mux(a= in[0], b= in[1], sel= sel[3], out= a1);
+    Mux(a= in[2], b= in[3], sel= sel[3], out= a2);
+    Mux(a= in[4], b= in[5], sel= sel[3], out= a3);
+    Mux(a= in[6], b= in[7], sel= sel[3], out= a4);
+    Mux(a= in[8], b= in[9], sel= sel[3], out= a5);
+    Mux(a= in[10], b= in[11], sel= sel[3], out= a6);
+    Mux(a= in[12], b= in[13], sel= sel[3], out= a7);
+    Mux(a= in[14], b= in[15], sel= sel[3], out= a8);
+
+    Mux(a= a1, b= a2, sel= sel[2], out= a11);
+    Mux(a= a3, b= a4, sel= sel[2], out= a12);
+    Mux(a= a5, b= a6, sel= sel[2], out= a13);
+    Mux(a= a7, b= a8, sel= sel[2], out= a14);
+
+    Mux(a= a11, b= a12, sel= sel[1], out= a15);
+    Mux(a= a13, b= a14, sel= sel[1], out= a16);
+
+    Mux(a= a15, b= a16, sel= sel[0], out= out);
+}
