@@ -32,4 +32,56 @@ CHIP CPU {
 
     PARTS:
 	//// Replace this comment with your code.
+
+    // instruction[15] C or A Instruction
+    // instruction[12] => a: use A Register?
+    // instruction[6..11] => c: comp
+    // instruction[3..5] => d: dest d[1] = A d[2] = D d[3] = M
+    // instruction[0..2] => j: jump j[1] = '<' j[2] = '=' j[3] = '>'
+
+    // init A or C
+    Or(a= instruction[15], b= false, out= isC);
+    Not(in= isC, out= isA);
+
+    // A Register
+    Or(a= isA, b= instruction[5], out= writeA);
+    Mux16(a= aluOut, b= instruction, sel= isA, out= aRegIn);
+    Register(in= aRegIn, load= writeA, out= aReg);
+
+    // operator num
+    Mux16(a= aReg, b= inM, sel= instruction[12], out= aluOpAM);
+
+    // D Register
+    DRegister(in= aluOut, load= instruction[4], out= aluOpD);
+
+    // out 
+
+    // alu calculat
+    ALU(x= aluOpD, y= aluOpAM, zx= instruction[11], nx= instruction[10], zy= instruction[9], ny= instruction[8], f= instruction[7], no= instruction[6], out= aluOut, zr= aluZr, ng= aluNg);
+
+
+    // write mem?
+    And(a= instruction[3], b= isC, out= isWriteM);
+    Or(a= isWriteM, b= false, out= writeM);
+
+    // outM
+    Mux16(a= false, b= aluOut, sel= isWriteM, out= outM);
+
+    // address
+    //Mux16(a= false, b= aReg, sel= writeM, out= writedM);
+    Truncate16to15(in= aReg, out= addressM);
+
+    // pc
+    // nJump可以利用与非门换成3个非求与，免得换来换去
+    And(a= aluZr, b= instruction[1], out= jZr);
+    And(a= aluNg, b= instruction[2], out= JNg);
+    Or(a= aluZr, b= aluNg, out= aluNotPt);
+    Not(in= aluNotPt, out= aluPt);
+    And(a= aluPt, b= instruction[0], out= jPt);
+    Or(a= jZr, b= JNg, out= jNotPt);
+    Or(a= jNotPt, b= jPt, out= jump);
+    Not(in= jump, out= nJump);
+    //Or(a= jump, b= isA, out= isLoadPC);
+    PC(in= aReg, load= jump, inc= nJump, reset= reset, out= pcFull);
+    Truncate16to15(in= pcFull, out= pc);
 }
