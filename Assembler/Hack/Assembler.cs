@@ -160,9 +160,14 @@ public partial class Assembler
             using var reader = new StreamReader(inStream);
             var parser = new Parser(reader);
 
+            SymbolTable symbolTable = new SymbolTable();
+            var symbolCode = new SymbolCode(symbolTable);
+            __assemble(parser, symbolCode);
+
+            parser.Reset();
             using var outStream = File.Create(outputFileName, BUFF_SIZE);
             using var writer = new StreamWriter(outStream);
-            var code = new Code(writer);
+            var code = new Code(writer, symbolTable);
 
             __assemble(parser, code);
 
@@ -181,7 +186,7 @@ public partial class Assembler
         return;
     }
 
-    void __assemble(Parser parser, Code code)
+    void __assemble(Parser parser, ICoder code)
     {
         try
         {
@@ -225,20 +230,20 @@ public partial class Assembler
         }
     }
 
-    void __assembleA(Parser parser, Code code)
+    void __assembleA(Parser parser, ICoder code)
     {
         var symbol = parser.Symbol();
-        // TODO: 符号表解析
         code.ACommand(symbol);
     }
 
-    void __assembleC(Parser parser, Code code)
+    void __assembleC(Parser parser, ICoder code)
     {
         code.CCommand(parser.Comp(), parser.Dest(), parser.Jump());
     }
 
-    void __assembleL(Parser parser, Code code)
+    void __assembleL(Parser parser, ICoder code)
     {
-        throw new NotImplementedException();
+        var symbol = parser.Symbol();
+        code.LCommand(symbol, parser.CurrentCommand);
     }
 }

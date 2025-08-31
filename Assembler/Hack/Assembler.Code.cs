@@ -8,8 +8,37 @@ namespace Hack;
 
 public partial class Assembler
 {
+    public interface ICoder
+    {
+        void ACommand(string address);
 
-    public class Code
+        void CCommand(string comp, string dest, string jump);
+
+        void LCommand(string symbol, WORD currentCommand);
+    }
+
+    public class SymbolCode : ICoder
+    {
+        readonly SymbolTable symbolTable;
+
+        public SymbolCode(SymbolTable symbolTable)
+        {
+            this.symbolTable = symbolTable;
+        }
+
+        public void ACommand(string address)
+        {
+        }
+
+        public void CCommand(string comp, string dest, string jump) { }
+
+        public void LCommand(string symbol, WORD currentCommand)
+        {
+            symbolTable.AddEntry(symbol, currentCommand);
+        }
+    }
+
+    public class Code : ICoder
     {
         public const string EMPTY = "";
         public const WORD A_COMMAND_MASK = 0x7FFF;
@@ -21,14 +50,18 @@ public partial class Assembler
         public const WORD C_COMMAND_D_MASK = 0x0038;
         public const WORD C_COMMAND_J_MASK = 0x0007;
         const string FORMAT = "{0:b}\n";
+        const WORD VARIABLE_ADDRESS = 0x000F;
 
         WORD buffer;
 
         readonly StreamWriter writer;
+        readonly SymbolTable symbolTable;
+        WORD currentVariableAddress = VARIABLE_ADDRESS;
 
-        public Code(StreamWriter writer)
+        public Code(StreamWriter writer, SymbolTable symbolTable)
         {
             this.writer = writer;
+            this.symbolTable = symbolTable;
         }
 
         ~Code()
@@ -41,9 +74,18 @@ public partial class Assembler
             writer.WriteLine(Convert.ToString(word, 2).PadLeft(16, '0'));
         }
 
-        public void ACommand(string address)
+        public void ACommand(string symbol)
         {
-            ACommand(WORD.Parse(address));
+            if (!symbolTable.TryGetAddress(symbol, out WORD address))
+            {
+                if (!WORD.TryParse(symbol, out address))
+                {
+                    symbolTable.AddEntry(symbol, ++currentVariableAddress);
+                    address = currentVariableAddress;
+                }
+            }
+
+            ACommand(address);
         }
 
         public void ACommand(WORD address)
@@ -62,9 +104,8 @@ public partial class Assembler
             Write(buffer);
         }
 
-        public void LCommand(string symbol)
+        public void LCommand(string symbol, WORD currentCommand)
         {
-            throw new NotImplementedException();
         }
 
         /// <summary>

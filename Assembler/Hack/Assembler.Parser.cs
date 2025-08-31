@@ -26,7 +26,7 @@ public partial class Assembler
         string comp = string.Empty;
         string jump = string.Empty;
         public int CurrentLine { get; protected set; }
-        public int CurrentCommand { get; protected set; }
+        public WORD CurrentCommand { get; protected set; }
         public string Buffer { get => buffer; }
 
         public Parser(StreamReader reader)
@@ -38,6 +38,13 @@ public partial class Assembler
 
         ~Parser()
         {
+        }
+
+        public void Reset()
+        {
+            reader.BaseStream.Position = 0;
+            CurrentLine = 0;
+            CurrentCommand = 0;
         }
 
         /// <summary>
@@ -96,9 +103,6 @@ public partial class Assembler
         /// </summary>
         public void Advandce()
         {
-            CurrentCommand++;
-            CurrentLine++;
-
             buffer = reader.ReadLine() ?? string.Empty;
             Debug.Assert(buffer != null);
 
@@ -117,9 +121,11 @@ public partial class Assembler
             {
                 case ECommandType.A_COMMAND:
                     __tryParseA();
+                    CurrentCommand++;
                     break;
                 case ECommandType.C_COMMAND:
                     __tryParseC();
+                    CurrentCommand++;
                     break;
                 case ECommandType.L_COMMAND:
                     __tryParseL();
@@ -127,6 +133,8 @@ public partial class Assembler
                 default:
                     throw new Exception(string.Format("Advandce unsupported cmd: {0}", commandType));
             }
+
+            CurrentLine++;
         }
 
         bool __tryParseA()
@@ -205,7 +213,7 @@ public partial class Assembler
                 return false;
             }
 
-            symbol = buffer[1..-1];
+            symbol = buffer[1..(buffer.Length - 1)];
 
             return regSymbol.IsMatch(symbol);
         }
