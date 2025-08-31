@@ -10,13 +10,7 @@ public partial class VMTranslator
 {
     public class Parser
     {
-        const char A_COMMAND_PREFIX = '@';
-        const char L_COMMAND_PREFIX = '(';
-        const char L_COMMAND_SUBFIX = ')';
-        static readonly Regex regASymbol = new(@"[\w\d_.$:]*");
-        static readonly Regex regSymbol = new(@"[\w_.$:][\w\d_.$:]*");
-        static readonly Regex regConstanst = new(@"\d+");
-        static readonly Regex regCCommand = new(@"(A?M?D?)=?(.+);?(\W+)");
+        static readonly Regex regCommand = new(@"(\S+)(\s+(\S+)){0,2}\s*(//.*)?");
 
         readonly StreamReader reader;
         string buffer = string.Empty;
@@ -24,6 +18,10 @@ public partial class VMTranslator
         public int CurrentLine { get; protected set; }
         public WORD CurrentCommand { get; protected set; }
         public string Buffer { get => buffer; }
+        string arg1 = string.Empty;
+        string arg2 = string.Empty;
+        int tokenIndex = 0;
+
 
         public Parser(StreamReader reader)
         {
@@ -103,19 +101,16 @@ public partial class VMTranslator
             Debug.Assert(buffer != null);
 
             buffer = __trim(buffer);
+            __resetToken();
 
-            char firstChar = buffer[0];
-
-            commandType = firstChar switch
+            string? cmd = __token();
+            if (string.IsNullOrEmpty(cmd) || !VMTranslator.commandMap.TryGetValue(cmd, out commandType))
             {
-                _ => ECommandType.C_ARITHMETIC,
-            };
-
-            switch (commandType)
-            {
-                default:
-                    throw new Exception(string.Format("Advandce unsupported cmd: {0}", commandType));
+                throw new Exception(string.Format("Advandce unsupported cmd: {0}", buffer));
             }
+
+            arg1 = __token();
+            arg2 = __token();
 
             CurrentCommand++;
             CurrentLine++;
@@ -131,16 +126,53 @@ public partial class VMTranslator
                 stringBuilder.Remove(idx, stringBuilder.Length - idx);
             }
 
-            for (int i = stringBuilder.Length - 1; i >= 0; i--)
-            {
-                char c = stringBuilder[i];
-                if (char.IsWhiteSpace(c))
-                {
-                    stringBuilder.Remove(i, 1);
-                }
-            }
+            // for (int i = stringBuilder.Length - 1; i >= 0; i--)
+            // {
+            //     char c = stringBuilder[i];
+            //     if (char.IsWhiteSpace(c))
+            //     {
+            //         stringBuilder.Remove(i, 1);
+            //     }
+            // }
 
             return stringBuilder.ToString();
+        }
+
+        void __resetToken()
+        {
+            tokenIndex = 0;
+        }
+
+        string __token()
+        {
+            int lastWordIndex = -1;
+            for (int i = tokenIndex; i < buffer.Length; i++)
+            {
+                tokenIndex++;
+
+                char c = buffer[i];
+                if (char.IsWhiteSpace(c))
+                {
+                    if (lastWordIndex < 0)
+                    {
+                        continue;
+                    }
+                    break;
+                }
+
+                if (lastWordIndex >= 0)
+                {
+                    continue;
+                }
+                lastWordIndex = i;
+            }
+
+            if (lastWordIndex < 0)
+            {
+                return string.Empty;
+            }
+
+            return buffer[lastWordIndex..(tokenIndex - 1)];
         }
 
         /// <summary>
@@ -160,7 +192,7 @@ public partial class VMTranslator
         /// <returns></returns>
         public string Arg1()
         {
-            return string.Empty;
+            return arg1;
         }
 
         /// <summary>
@@ -169,7 +201,7 @@ public partial class VMTranslator
         /// <returns></returns>
         public string Arg2()
         {
-            return string.Empty;
+            return arg2;
         }
 
     }
