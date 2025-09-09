@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.001.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Assembler", "Assembler\Assembler.csproj", "{7851D5B5-BEE3-4B07-B4D7-ED729E03E0B2}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VM2Hack", "VM2Hack\VM2Hack.csproj", "{48A69496-F750-4D1C-B0DD-2898400EB724}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{7851D5B5-BEE3-4B07-B4D7-ED729E03E0B2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7851D5B5-BEE3-4B07-B4D7-ED729E03E0B2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7851D5B5-BEE3-4B07-B4D7-ED729E03E0B2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7851D5B5-BEE3-4B07-B4D7-ED729E03E0B2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{48A69496-F750-4D1C-B0DD-2898400EB724}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{48A69496-F750-4D1C-B0DD-2898400EB724}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{48A69496-F750-4D1C-B0DD-2898400EB724}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{48A69496-F750-4D1C-B0DD-2898400EB724}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {2CD04A59-6D43-4617-AF25-3DFA4F713821}
+	EndGlobalSection
+EndGlobal

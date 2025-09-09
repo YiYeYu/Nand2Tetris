@@ -103,14 +103,23 @@ public partial class VMTranslator
             buffer = __trim(buffer);
             __resetToken();
 
-            string? cmd = __token();
+            string cmd = __token();
             if (string.IsNullOrEmpty(cmd) || !VMTranslator.commandMap.TryGetValue(cmd, out commandType))
             {
-                throw new Exception(string.Format("Advandce unsupported cmd: {0}", buffer));
+                throw new Exception(string.Format("Advandce unsupported cmd: {0}, {1}", buffer, cmd));
             }
 
-            arg1 = __token();
-            arg2 = __token();
+
+            if (commandType == ECommandType.C_ARITHMETIC)
+            {
+                arg1 = cmd;
+                arg2 = string.Empty;
+            }
+            else
+            {
+                arg1 = __token();
+                arg2 = __token();
+            }
 
             CurrentCommand++;
             CurrentLine++;
@@ -146,10 +155,9 @@ public partial class VMTranslator
         string __token()
         {
             int lastWordIndex = -1;
-            for (int i = tokenIndex; i < buffer.Length; i++)
+            int i;
+            for (i = tokenIndex; i < buffer.Length; i++)
             {
-                tokenIndex++;
-
                 char c = buffer[i];
                 if (char.IsWhiteSpace(c))
                 {
@@ -166,13 +174,14 @@ public partial class VMTranslator
                 }
                 lastWordIndex = i;
             }
+            tokenIndex = i;
 
             if (lastWordIndex < 0)
             {
                 return string.Empty;
             }
 
-            return buffer[lastWordIndex..(tokenIndex - 1)];
+            return buffer[lastWordIndex..tokenIndex];
         }
 
         /// <summary>

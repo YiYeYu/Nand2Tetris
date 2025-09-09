@@ -101,6 +101,7 @@ public partial class VMTranslator
     };
 
     public const string INPUT_SUBFIX = ".vm";
+    public const string INPUT_PATTERN = "*" + INPUT_SUBFIX;
     public const string OUTPUT_SUBFIX = ".asm";
 
     public void Translate(string path)
@@ -129,7 +130,7 @@ public partial class VMTranslator
 
             if (isDir)
             {
-                foreach (var fileInfo in dInfo.GetFiles(INPUT_SUBFIX))
+                foreach (var fileInfo in dInfo.GetFiles(INPUT_PATTERN))
                 {
                     __translate(fileInfo, code);
                 }
@@ -146,12 +147,14 @@ public partial class VMTranslator
             Console.WriteLine("Translate failed: {0}", e);
         }
 
-        Console.WriteLine("Translate success: {0}", outputFileName);
+        Console.WriteLine("Translate success: {0}, {1}", outputFileName, isDir);
         return;
     }
 
     void __translate(FileInfo fileInfo, Code code)
     {
+        // Console.WriteLine($"translate: {fileInfo.Name}");
+
         try
         {
             using var inStream = fileInfo.OpenRead();
