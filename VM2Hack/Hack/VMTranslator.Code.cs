@@ -80,6 +80,14 @@ public partial class VMTranslator
             {ECommandType.C_ARITHMETIC, WriteArithmetic},
             {ECommandType.C_PUSH, WritePush},
             {ECommandType.C_POP, WritePop},
+
+            {ECommandType.C_LABEL, WriteLabel},
+            {ECommandType.C_GOTO, WriteGoto},
+            {ECommandType.C_IF, WriteIf},
+
+            {ECommandType.C_FUNCTION, WriteFunction},
+            {ECommandType.C_CALL, WriteCall},
+            {ECommandType.C_RETURN, WriteReturn},
         };
 
         static readonly Dictionary<string, string> ArithmeticCommands = new(){
@@ -89,10 +97,6 @@ public partial class VMTranslator
             {ARITHMETIC_SUB, "D-A"},
             {ARITHMETIC_AND, "D+A"},
             {ARITHMETIC_OR, "D+A"},
-
-            {ARITHMETIC_EQ, "D+A"},
-            {ARITHMETIC_GT, "D+A"},
-            {ARITHMETIC_LT, "D+A"},
         };
 
         readonly StreamWriter writer;
@@ -247,6 +251,84 @@ public partial class VMTranslator
             code.Write($"@M=D\n");
         }
 
+        public static void WriteLabel(Code code, ECommandType _, string label, string __)
+        {
+            label = EncodeLabel(label);
+            code.Write($"({label})\n");
+        }
+
+        public static void WriteGoto(Code code, ECommandType _, string label, string __)
+        {
+            label = EncodeLabel(label);
+            code.Write($"@{label}\n0;JMP\n");
+        }
+
+        public static void WriteIf(Code code, ECommandType _, string label, string __)
+        {
+            label = EncodeLabel(label);
+            code.__PopD();
+            code.Write($"@{label}\nD;JNE\n");
+        }
+
+        public static void WriteFunction(Code code, ECommandType _, string funName, string nParams)
+        {
+            funName = EncodeLabel(funName);
+            int nParamsInt = int.Parse(nParams);
+
+            code.Write($"({funName})\n"); // label
+
+            // push 0
+            code.__DCopy("0");
+            for (int i = 0; i < nParamsInt; i++)
+            {
+                code.__PushD();
+            }
+        }
+
+        public static void WriteCall(Code code, ECommandType _, string funName, string nParams)
+        {
+            funName = EncodeLabel(funName);
+            int nParamsInt = int.Parse(nParams);
+
+            code.__PushA(); // push return address
+
+            code.Write($"@LCL\nD=M\n");
+            code.__PushD(); // push LCL
+            code.Write($"@ARG\nD=M\n");
+            code.__PushD(); // push ARG
+            code.Write($"@THIS\nD=M\n");
+            code.__PushD(); // push THIS
+            code.Write($"@THAT\nD=M\n");
+            code.__PushD(); // push THAT
+
+            code.Write($"@SP\nD=M\n@5\nD=D-A\n@{nParamsInt}\nD=D-A\n@ARG\nM=D\n"); // ARG = SP - 5 - nParams
+            code.Write($"@SP\nD=M\n@LCL\nM=D\n"); // LCL = SP
+
+            code.Write($"@{funName}\n0;JMP\n"); // goto funName
+        }
+
+        public static void WriteReturn(Code code, ECommandType _, string __, string ___)
+        {
+            code.Write($"@LCL\nAD=M\n");
+            code.__A2Temp(); // frame = LCL
+
+            code.Write($"@5\nA=D-A\nD=M\n");
+            code.__D2Temp(1); // return = *(frame-5)
+
+            code.__PopD();
+            code.Write($"@ARG\nA=M\nM=D\n"); // pop *ARG; callee ARG = caller SP
+
+            code.Write($"@SP\nA=M\nM=D+1\n"); // SP = ARG + 1; 1 means return value
+
+            code.Write($"@R13\nAM=M-1\nD=M\n@THAT\nD=M\n"); // THAT = *(frame-1)
+            code.Write($"@R13\nAM=M-1\nD=M\n@THIS\nM=D\n"); // THIS = *(frame-2)
+            code.Write($"@R13\nAM=M-1\nD=M\n@ARG\nM=D\n"); // ARG = *(frame-3)
+            code.Write($"@R13\nAM=M-1\nD=M\n@LCL\nM=D\n"); // LCL = *(frame-4)
+
+            code.__Temp2A(1);
+            code.Write($"0;JMP\n"); // goto return
+        }
+
 
         static void __WritePushPopAddress(Code code, string segment, string index)
         {
@@ -296,12 +378,24 @@ public partial class VMTranslator
 
         /// <summary>
         /// M[SP++]=D
+        /// A=SP
         /// </summary>
         void __PushD()
         {
             //M[SP] = D
             //SP++
             Write($"@SP\nA=M\nM=D\n@SP\nM=M+1\n");
+        }
+
+        /// <summary>
+        /// M[SP++]=A
+        /// D=A
+        /// A=SP
+        /// </summary>
+        void __PushA()
+        {
+            Write($"D=A\n");
+            __PushD();
         }
 
         /// <summary>
@@ -358,6 +452,18 @@ public partial class VMTranslator
         void __Temp2A(WORD index = 0)
         {
             Write($"@{TEMP_REGISTER[index]}\nA=M\n");
+        }
+
+        /// <summary>
+        /// vm label 2 hack label<br/>
+        /// vm label: 字母数字下划线点冒号组成，不能是数字开头<br/>
+        /// hack label: 字母数字下划线点冒号美元符号组成，不能是数字开头<br/>
+        /// </summary>
+        /// <param name="label"></param>
+        /// <returns></returns>
+        public static string EncodeLabel(string label)
+        {
+            return label;
         }
     }
 

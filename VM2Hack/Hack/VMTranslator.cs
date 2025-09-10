@@ -124,20 +124,30 @@ public partial class VMTranslator
 
         try
         {
+
+            FileInfo[] fileinfos;
+            if (isDir)
+            {
+                fileinfos = dInfo.GetFiles(INPUT_PATTERN);
+            }
+            else
+            {
+                fileinfos = new FileInfo[] { fInfo };
+            }
+
+            if (fileinfos == null || fileinfos.Length == 0)
+            {
+                Console.WriteLine("Translate failed: empty {0}", path);
+                return;
+            }
+
             using var outStream = new FileStream(outputFileName, FileMode.Create, FileAccess.Write);
             using var writer = new StreamWriter(outStream);
             var code = new Code(writer);
 
-            if (isDir)
+            foreach (var fileInfo in dInfo.GetFiles(INPUT_PATTERN))
             {
-                foreach (var fileInfo in dInfo.GetFiles(INPUT_PATTERN))
-                {
-                    __translate(fileInfo, code);
-                }
-            }
-            else
-            {
-                __translate(fInfo, code);
+                __translate(fileInfo, code);
             }
 
             writer.Flush();
