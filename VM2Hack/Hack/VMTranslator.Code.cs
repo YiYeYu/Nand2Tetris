@@ -140,7 +140,7 @@ public partial class VMTranslator
 
         public void WriteCommand(ECommandType cmd, string arg1, string arg2)
         {
-            Console.WriteLine($"WriteCommand: {cmd}: {arg1}, {arg2}");
+            // Console.WriteLine($"WriteCommand: {cmd}: {arg1}, {arg2}");
             WriteCommands[cmd](this, cmd, arg1, arg2);
         }
 
