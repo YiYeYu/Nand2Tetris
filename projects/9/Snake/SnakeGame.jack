@@ -1,0 +1,82 @@
+// This file is part of www.nand2tetris.org
+// and the book "The Elements of Computing Systems"
+// by Nisan and Schocken, MIT Press.
+/**
+ * Implements the Snake game.
+ * The 4 arrow keys are used to move the Snake up, down, left, and right.
+ * the Snake's size. The 'q' key is used to quit the game.
+ */
+class SnakeGame {
+   field Snake Snake; // the Snake of this game
+   field int direction; // the Snake's current direction
+   field Array moveVectors;
+
+   /** Constructs a new Snake game. */
+   constructor SnakeGame new() {
+      // The initial Snake is located in (0,0).
+      let Snake = Snake.new(0, 0);
+      let direction = Const.DIR_RIGHT;
+
+      let moveVectors = Array.new(4);
+      moveVectors[Const.DIR_NONE] = Vector2.new(0, 0);
+      moveVectors[Const.DIR_LEFT] = Vector2.new(-1, 0);
+      moveVectors[Const.DIR_UP] = Vector2.new(0, -1);
+      moveVectors[Const.DIR_RIGHT] = Vector2.new(1, 0);
+      moveVectors[Const.DIR_DOWN] = Vector2.new(0, -1);
+
+      return this;
+   }
+
+   /** Disposes this game. */
+   method void dispose() {
+      do Snake.dispose();
+      do Memory.deAlloc(this);
+      return;
+   }
+
+   /** Moves the Snake in the current direction. */
+   method void moveSnake() {
+      var Vector2 moveVec;
+      moveVec = moveVectors[direction];
+      do Snake.move(moveVec);
+      do Sys.wait(5);  // delays the next movement
+      return;
+   }
+
+   /** Runs the game: handles the user's inputs and moves the Snake accordingly */
+   method void run() {
+      var char key;  // the key currently pressed by the user
+      var boolean exit;
+      let exit = false;
+      
+      while (~exit) {
+         // waits for a key to be pressed
+         while (key = 0) {
+            let key = Keyboard.keyPressed();
+            do moveSnake();
+         }
+
+         if (key == Const.KEY_Q)
+         {
+            let exit = true;
+         }
+         else
+         {
+            if(key >= Const.KEY_LEFT && key <= Const.KEY_DOWN)
+            {
+               direction = key - Const.KEY_LEFT + 1;
+            }
+         }
+
+         // waits for the key to be released
+         while (~(key = 0)) {
+            let key = Keyboard.keyPressed();
+            do moveSnake();
+         }
+     } // while
+     return;
+   }
+}
+
+
+

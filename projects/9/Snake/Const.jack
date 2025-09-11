@@ -1,0 +1,17 @@
+class Const
+{
+   static int SCREEN_WIDTH = 510;
+   static int SCREEN_HEIGHT = 254;
+   
+   static int DIR_NONE = 0;
+   static int DIR_LEFT = 1;
+   static int DIR_UP = 2;
+   static int DIR_RIGHT = 3;
+   static int DIR_DOWN = 4;
+
+   static char KEY_Q = "Q".charAt(0);
+   static char KEY_LEFT = 130;
+   static char KEY_UP = 131;
+   static char KEY_RIGHT = 132;
+   static char KEY_DOWN = 133;
+}

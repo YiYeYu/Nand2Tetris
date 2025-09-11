@@ -1,0 +1,92 @@
+// This file is part of www.nand2tetris.org
+// and the book "The Elements of Computing Systems"
+// by Nisan and Schocken, MIT Press.
+
+/** Implements a graphical Snake.
+    The Snake has top-left x and y coordinates. */
+class Snake {
+
+   static int size = 2;
+
+   field Vector2 head;
+   field Vector2 tail;
+
+   /** Constructs and draws a new Snake with a given location. */
+   constructor Snake new(int ax, int ay) {
+      let head = Vector2.new(ax, ay);
+      let tail = Vector2.new(ax - 1, ay);
+      do draw();
+      return this;
+   }
+
+   /** Disposes this Snake. */
+   method void dispose() {
+      do Memory.deAlloc(this);
+      return;
+   }
+
+   /** Moves this Snake up by offset. */
+   method void move(Vector2 offset) {
+      do eraseTail()
+      do tail.setByOther(head);
+      do head.moveByOffeset(offset);
+      do drawHead();
+      return;
+   }
+
+   /** Draws this Snake in its current (x,y) location */
+   method void draw() {
+      do drawHead();
+      do drawTail();
+      return;
+   }
+
+   /** Erases this Snake. */
+   method void erase() {
+      do eraseTail();
+      do eraseHead();
+      return;
+   }
+
+   method void drawHead() {
+      // Draws the Snake using the color black
+      do drawPos(head);
+      return;
+   }
+   
+   method void eraseHead() {
+      // Draws the Snake using the color white (background color)
+      do erasePos(false);
+      return;
+   }
+
+   method void drawTail() {
+      // Draws the Snake using the color black
+      do drawPos(tail);
+      return;
+   }
+   
+   method void eraseTail() {
+      // Draws the Snake using the color white (background color)
+      do erasePos(tail);
+      return;
+   }
+
+   method void drawPos(Vector2 pos) {
+      do Screen.setColor(true);
+      do __drawPos(pos);
+      return;
+   }
+   
+   method void erasePos(Vector2 pos) {
+      // Draws the Snake using the color white (background color)
+      do Screen.setColor(false);
+      do __drawPos(pos);
+      return;
+   }
+
+   method void __drawPos(Vector2 pos) {
+      do Screen.drawRectangle(x * size, y * size, (x + 1) * size, (y + 1) * size);
+      return;
+   }
+}
