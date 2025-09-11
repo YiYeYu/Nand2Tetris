@@ -28,6 +28,7 @@ public partial class VMTranslator
     {
         const WORD WORD_ONE = 0x0001;
         const WORD WORD_MIN = 0x8000;
+        const WORD WORD_MAX = 0x7FFF;
         const WORD WORD_NEG_ONE = 0xFFFF;
 
         record WordInterval(WORD Start, WORD End);
@@ -44,8 +45,15 @@ public partial class VMTranslator
         static readonly string TEMP_REGISTER = TEMP_REGISTERS[0];
 
         // x | -x = -1, 0|-0=0
-        const string CMD_D_EQ_ZERO = "D=D-A\nA=-D\nD=D|A\nD=!D\n";
-        static readonly string CMD_D_LT_ZERO = $"A={WORD_MIN}\nD=D&A\n";
+        const string CMD_D_EQ_ZERO = "A=-D\nD=D|A\nD=!D\n";
+        static readonly string CMD_D_LT_ZERO = $"@{WORD_MAX}\nA=A+1\nD=D&A\n" + CMD_D_EQ_ZERO;
+        const string SYS_LABEL_START = "$SYS_LABEL_START";
+        const string SYS_LABEL_EQ = "$SYS_LABEL_EQ";
+        const string SYS_LABEL_LT = "$SYS_LABEL_LT";
+        const string SYS_LABEL_GT = "$SYS_LABEL_GT";
+        const string SYS_LABEL_WRITE_TRUE = "$SYS_LABEL_WRITE_TRUE";
+        const string SYS_LABEL_WRITE_FALSE = "$SYS_LABEL_WRITE_FALSE";
+        const string SYS_AUTO_LANEL_FORMAT = "$SYS_AUTO_LANEL_{0}";
 
         const string MEM_SEGMENT_ARGRUMENT = "argument";
         const string MEM_SEGMENT_LOCAL = "local";
@@ -108,6 +116,7 @@ public partial class VMTranslator
         WORD heapPtr;
         WORD staticPtr;
         WORD[] buffers = new WORD[2];
+        WORD autoLabelIndex = 0;
 
         public Code(StreamWriter writer)
         {
@@ -116,6 +125,8 @@ public partial class VMTranslator
             spPtr = STACK_INTERVAL.Start;
             heapPtr = HEAP_INTERVAL.Start;
             staticPtr = STATIC_INTERVAL.Start;
+
+            WriteInit();
         }
 
         ~Code()
@@ -142,6 +153,60 @@ public partial class VMTranslator
             currentFileMaxIndex = 0;
         }
 
+        void WriteInit()
+        {
+            // Write($"@{SYS_LABEL_START}\n0;JMP\n");
+
+            // WriteLabel(this, ECommandType.C_LABEL, SYS_LABEL_EQ, string.Empty);
+            // Write($"@{SYS_LABEL_WRITE_TRUE}\nD;JMP\n");
+            // Write($"@{SYS_LABEL_WRITE_FALSE}\n0;JMP\n");
+
+            // WriteLabel(this, ECommandType.C_LABEL, SYS_LABEL_LT, string.Empty);
+            // Write($"@{SYS_LABEL_WRITE_TRUE}\nD;JLT\n");
+            // Write($"@{SYS_LABEL_WRITE_FALSE}\n0;JMP\n");
+
+            // WriteLabel(this, ECommandType.C_LABEL, SYS_LABEL_GT, string.Empty);
+            // Write($"@{SYS_LABEL_WRITE_TRUE}\nD;JGT\n");
+            // Write($"@{SYS_LABEL_WRITE_FALSE}\n0;JMP\n");
+
+            // WriteLabel(this, ECommandType.C_LABEL, SYS_LABEL_WRITE_TRUE, string.Empty);
+            // Write($"@0\nD=!A\n");
+            // __PushD();
+            // __Temp2A();
+            // Write($"0;JMP\n");
+            // WriteLabel(this, ECommandType.C_LABEL, SYS_LABEL_WRITE_FALSE, string.Empty);
+            // Write($"@0\n");
+            // __PushD();
+            // __Temp2A();
+            // Write($"0;JMP\n");
+
+            // WriteLabel(this, ECommandType.C_LABEL, SYS_LABEL_START, string.Empty);
+        }
+
+        string GenAutoLabel()
+        {
+            return string.Format(SYS_AUTO_LANEL_FORMAT, autoLabelIndex++);
+        }
+
+        void WriteJump(string jump)
+        {
+            string trueLabel = GenAutoLabel();
+            string endLabel = GenAutoLabel();
+
+            Write($"@{trueLabel}\nD;{jump}\n");
+
+            //false
+            Write($"@0\nD=A\n");
+            Write($"@{endLabel}\n0;JMP\n");
+
+            //true
+            WriteLabel(this, ECommandType.C_LABEL, trueLabel, string.Empty);
+            Write($"@0\nD=!A\n");
+
+            //end
+            WriteLabel(this, ECommandType.C_LABEL, endLabel, string.Empty);
+        }
+
         public void WriteCommand(ECommandType cmd, string arg1, string arg2)
         {
             // Console.WriteLine($"WriteCommand: {cmd}: {arg1}, {arg2}");
@@ -154,7 +219,7 @@ public partial class VMTranslator
             {
                 case ARITHMETIC_NEG:
                 case ARITHMETIC_NOT:
-                    code.__PopD();
+                    code.__PopD(); // y
                     break;
                 case ARITHMETIC_ADD:
                 case ARITHMETIC_SUB:
@@ -163,8 +228,8 @@ public partial class VMTranslator
                 case ARITHMETIC_LT:
                 case ARITHMETIC_AND:
                 case ARITHMETIC_OR:
-                    code.__PopD();
-                    code.__PopA();
+                    code.__PopD(); //y
+                    code.__PopA(); //x
                     break;
                 default:
                     throw new ArgumentException($"unsupported cmd {cmd}");
@@ -182,7 +247,7 @@ public partial class VMTranslator
                     code.Write($"D=D+A\n");
                     break;
                 case ARITHMETIC_SUB:
-                    code.Write($"D=D-A\n");
+                    code.Write($"D=A-D\n");
                     break;
                 case ARITHMETIC_AND:
                     code.Write($"D=D&A\n");
@@ -192,14 +257,15 @@ public partial class VMTranslator
                     break;
                 case ARITHMETIC_GT:
                     code.Write($"D=A-D\n");
-                    code.Write(CMD_D_LT_ZERO);
+                    code.WriteJump("JGT");
                     break;
                 case ARITHMETIC_LT:
-                    code.Write($"D=D-A\n");
-                    code.Write(CMD_D_LT_ZERO);
+                    code.Write($"D=A-D\n");
+                    code.WriteJump("JLT");
                     break;
                 case ARITHMETIC_EQ:
-                    code.Write(CMD_D_EQ_ZERO);
+                    code.Write($"D=A-D\n");
+                    code.WriteJump("JEQ");
                     break;
                 default:
                     throw new ArgumentException($"unsupported cmd {cmd}");
