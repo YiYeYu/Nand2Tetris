@@ -23,8 +23,14 @@ D;JLE // if key <=0, clear, else fill
 D=M
 M=M+1 // count++
 @SCREEN
-A=D+A // D -> pixel
-M=65535 // set pixel[count] = 1
+AD=D+A // D -> pixel
+@R13
+M=D
+@32767 //0xFF
+D=A
+@R13
+A=M
+M=D // set pixel[count] = 1
 @LOOP
 0;JMP
 
@@ -35,8 +41,9 @@ D=M
 @SCREEN
 A=D+A
 M=0
-@CLEAR
-D;JGE
+//不用持续清理，清一个就重新监听按键
+//@CLEAR
+//D;JGE
 @LOOP
 0;JMP
 
