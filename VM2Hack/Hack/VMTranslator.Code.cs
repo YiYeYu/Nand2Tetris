@@ -210,6 +210,7 @@ public partial class VMTranslator
         public void WriteCommand(ECommandType cmd, string arg1, string arg2)
         {
             // Console.WriteLine($"WriteCommand: {cmd}: {arg1}, {arg2}");
+            Write($"// {cmd}: {arg1}, {arg2}\n");
             WriteCommands[cmd](this, cmd, arg1, arg2);
         }
 
@@ -298,7 +299,7 @@ public partial class VMTranslator
 
             __WritePushPopAddress(code, segment, index);
 
-            code.Write($"@D=M\n");
+            code.Write($"D=M\n");
             code.__PushD();
         }
 
@@ -311,10 +312,10 @@ public partial class VMTranslator
 
             __WritePushPopAddress(code, segment, index);
 
-            code.__A2Temp();
+            code.__D2Temp();
             code.__PopD();
             code.__Temp2A();
-            code.Write($"@M=D\n");
+            code.Write($"M=D\n");
         }
 
         public static void WriteLabel(Code code, ECommandType _, string label, string __)
@@ -407,13 +408,13 @@ public partial class VMTranslator
                 case MEM_SEGMENT_THAT:
                     address = MemSegmentAddr[segment];
                     code.__DCopy(index);
-                    code.Write($"@{address}\nA=M\nAD=D+A\n");
+                    code.Write($"@{address}\nAD=D+M\n");
                     break;
                 case MEM_SEGMENT_POINTER:
                 case MEM_SEGMENT_TEMP:
                     address = MemSegmentAddr[segment];
                     code.__DCopy(index);
-                    code.Write($"@{address}\nA=D+A\n");
+                    code.Write($"@{address}\nAD=D+A\n");
                     break;
                 case MEM_SEGMENT_STATIC:
                     WORD curIdex = WORD.Parse(index);
@@ -424,7 +425,7 @@ public partial class VMTranslator
                     address = MemSegmentAddr[segment];
                     code.__DCopy(index);
                     code.Write($"@{code.existFileMaxIndex}\nD=D+A\n");
-                    code.Write($"@{address}\nA=D+A\n");
+                    code.Write($"@{address}\nAD=D+A\n");
                     break;
                 default:
                     throw new ArgumentException($"unsupported segment {segment}");
@@ -502,22 +503,22 @@ public partial class VMTranslator
 
         void __D2Temp(WORD index = 0)
         {
-            Write($"@{TEMP_REGISTER[index]}\nM=D\n");
+            Write($"@{TEMP_REGISTERS[index]}\nM=D\n");
         }
 
         void __Temp2D(WORD index = 0)
         {
-            Write($"@{TEMP_REGISTER[index]}\nD=M\n");
+            Write($"@{TEMP_REGISTERS[index]}\nD=M\n");
         }
 
         void __A2Temp(WORD index = 0)
         {
-            Write($"@{TEMP_REGISTER[index]}\nM=A\n");
+            Write($"@{TEMP_REGISTERS[index]}\nM=A\n");
         }
 
         void __Temp2A(WORD index = 0)
         {
-            Write($"@{TEMP_REGISTER[index]}\nA=M\n");
+            Write($"@{TEMP_REGISTERS[index]}\nA=M\n");
         }
 
         /// <summary>
