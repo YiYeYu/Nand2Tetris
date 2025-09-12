@@ -124,31 +124,31 @@ public partial class VMTranslator
 
         try
         {
-
-            FileInfo[] fileinfos;
+            FileInfo[] fileInfos;
             if (isDir)
             {
-                fileinfos = dInfo.GetFiles(INPUT_PATTERN);
+                fileInfos = dInfo.GetFiles(INPUT_PATTERN);
             }
             else
             {
-                fileinfos = new FileInfo[] { fInfo };
+                fileInfos = new FileInfo[] { fInfo };
             }
 
-            if (fileinfos == null || fileinfos.Length == 0)
+            if (fileInfos == null || fileInfos.Length == 0)
             {
                 Console.WriteLine("Translate failed: empty {0}", path);
                 return;
             }
 
+            SymbolTable symbolTable = new();
+            var symbolCode = new SymbolCode(symbolTable);
+            __translate(fileInfos, symbolCode);
+
             using var outStream = new FileStream(outputFileName, FileMode.Create, FileAccess.Write);
             using var writer = new StreamWriter(outStream);
-            var code = new Code(writer);
+            var code = new Code(writer, symbolTable);
 
-            foreach (var fileInfo in dInfo.GetFiles(INPUT_PATTERN))
-            {
-                __translate(fileInfo, code);
-            }
+            __translate(fileInfos, code);
 
             writer.Flush();
         }
@@ -161,7 +161,15 @@ public partial class VMTranslator
         return;
     }
 
-    void __translate(FileInfo fileInfo, Code code)
+    void __translate(FileInfo[] fileInfos, ICoder code)
+    {
+        foreach (var fileInfo in fileInfos)
+        {
+            __translate(fileInfo, code);
+        }
+    }
+
+    void __translate(FileInfo fileInfo, ICoder code)
     {
         // Console.WriteLine($"translate: {fileInfo.Name}");
 
@@ -181,7 +189,7 @@ public partial class VMTranslator
         }
     }
 
-    void __translate(Parser parser, Code code)
+    void __translate(Parser parser, ICoder code)
     {
         try
         {

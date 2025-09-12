@@ -9,6 +9,39 @@ namespace Hack;
 
 public partial class VMTranslator
 {
+    public interface ICoder
+    {
+        void SetFile(string fileName);
+
+        void CloseFile();
+
+        void WriteCommand(ECommandType cmd, string arg1, string arg2);
+    }
+
+    public class SymbolCode : ICoder
+    {
+        readonly SymbolTable symbolTable;
+
+        public SymbolCode(SymbolTable symbolTable)
+        {
+            this.symbolTable = symbolTable;
+        }
+
+        public void SetFile(string fileName) { }
+
+        public void CloseFile() { }
+
+        public void WriteCommand(ECommandType cmd, string arg1, string arg2)
+        {
+            if (cmd != ECommandType.C_FUNCTION)
+            {
+                return;
+            }
+            symbolTable.AddEntry(arg1, WORD.MaxValue);
+        }
+    }
+
+
     /// <summary>
     /// 0-15虚拟寄存器<br/>
     /// R0 SP,
@@ -24,7 +57,7 @@ public partial class VMTranslator
     /// 2048-16383堆
     /// 16384-24575IO内存映像
     /// </summary>
-    public class Code
+    public class Code : ICoder
     {
         const WORD WORD_ONE = 0x0001;
         const WORD WORD_MIN = 0x8000;
@@ -48,12 +81,16 @@ public partial class VMTranslator
         const string CMD_D_EQ_ZERO = "A=-D\nD=D|A\nD=!D\n";
         static readonly string CMD_D_LT_ZERO = $"@{WORD_MAX}\nA=A+1\nD=D&A\n" + CMD_D_EQ_ZERO;
         const string SYS_LABEL_START = "$SYS_LABEL_START";
+        const string SYS_LABEL_END = "$SYS_LABEL_END";
+        const string SYS_LABEL_CUSTOME_START = "$SYS_LABEL_CUSTOME_START";
         const string SYS_LABEL_EQ = "$SYS_LABEL_EQ";
         const string SYS_LABEL_LT = "$SYS_LABEL_LT";
         const string SYS_LABEL_GT = "$SYS_LABEL_GT";
         const string SYS_LABEL_WRITE_TRUE = "$SYS_LABEL_WRITE_TRUE";
         const string SYS_LABEL_WRITE_FALSE = "$SYS_LABEL_WRITE_FALSE";
-        const string SYS_AUTO_LANEL_FORMAT = "$SYS_AUTO_LANEL_{0}";
+        const string SYS_AUTO_LABEL_FORMAT = "$SYS_AUTO_LABEL_{0}";
+
+        const string SYS_SYMBOL_INIT = "Sys.init";
 
         const string MEM_SEGMENT_ARGRUMENT = "argument";
         const string MEM_SEGMENT_LOCAL = "local";
@@ -108,7 +145,7 @@ public partial class VMTranslator
         };
 
         readonly StreamWriter writer;
-        readonly SymbolTable symbolTable = new();
+        readonly SymbolTable symbolTable;
         string contextFile = string.Empty;
         WORD existFileMaxIndex = 0;
         WORD currentFileMaxIndex = 0;
@@ -118,9 +155,10 @@ public partial class VMTranslator
         WORD[] buffers = new WORD[2];
         WORD autoLabelIndex = 0;
 
-        public Code(StreamWriter writer)
+        public Code(StreamWriter writer, SymbolTable symbolTable)
         {
             this.writer = writer;
+            this.symbolTable = symbolTable;
 
             spPtr = STACK_INTERVAL.Start;
             heapPtr = HEAP_INTERVAL.Start;
@@ -157,35 +195,51 @@ public partial class VMTranslator
         {
             // Write($"@{SYS_LABEL_START}\n0;JMP\n");
 
-            // WriteLabel(this, ECommandType.C_LABEL, SYS_LABEL_EQ, string.Empty);
+            // __Label(SYS_LABEL_EQ);
             // Write($"@{SYS_LABEL_WRITE_TRUE}\nD;JMP\n");
             // Write($"@{SYS_LABEL_WRITE_FALSE}\n0;JMP\n");
 
-            // WriteLabel(this, ECommandType.C_LABEL, SYS_LABEL_LT, string.Empty);
+            //__Label(SYS_LABEL_LT);
             // Write($"@{SYS_LABEL_WRITE_TRUE}\nD;JLT\n");
             // Write($"@{SYS_LABEL_WRITE_FALSE}\n0;JMP\n");
 
-            // WriteLabel(this, ECommandType.C_LABEL, SYS_LABEL_GT, string.Empty);
+            // __Label(SYS_LABEL_GT);
             // Write($"@{SYS_LABEL_WRITE_TRUE}\nD;JGT\n");
             // Write($"@{SYS_LABEL_WRITE_FALSE}\n0;JMP\n");
 
-            // WriteLabel(this, ECommandType.C_LABEL, SYS_LABEL_WRITE_TRUE, string.Empty);
+            // __Label(SYS_LABEL_WRITE_TRUE);
             // Write($"@0\nD=!A\n");
             // __PushD();
             // __Temp2A();
             // Write($"0;JMP\n");
-            // WriteLabel(this, ECommandType.C_LABEL, SYS_LABEL_WRITE_FALSE, string.Empty);
+            // __Label(SYS_LABEL_WRITE_FALSE);
             // Write($"@0\n");
             // __PushD();
             // __Temp2A();
             // Write($"0;JMP\n");
 
-            // WriteLabel(this, ECommandType.C_LABEL, SYS_LABEL_START, string.Empty);
+            __Label(SYS_LABEL_START);
+
+            Write($"@{STACK_INTERVAL.Start}\nD=A\n@SP\nM=D\n");
+
+            if (symbolTable.Contains(SYS_SYMBOL_INIT))
+            {
+                WriteCall(this, ECommandType.C_CALL, SYS_SYMBOL_INIT, "0");
+            }
+            else
+            {
+                Write($"@{SYS_LABEL_CUSTOME_START}\n0;JMP\n");
+            }
+
+            __Label(SYS_LABEL_END);
+            Write($"@{SYS_LABEL_END}\n0;JMP\n");
+
+            __Label(SYS_LABEL_CUSTOME_START);
         }
 
         string GenAutoLabel()
         {
-            return string.Format(SYS_AUTO_LANEL_FORMAT, autoLabelIndex++);
+            return string.Format(SYS_AUTO_LABEL_FORMAT, autoLabelIndex++);
         }
 
         void WriteJump(string jump)
@@ -318,10 +372,15 @@ public partial class VMTranslator
             code.Write($"M=D\n");
         }
 
+        void __Label(string label)
+        {
+            Write($"({label})\n");
+        }
+
         public static void WriteLabel(Code code, ECommandType _, string label, string __)
         {
             label = EncodeLabel(label);
-            code.Write($"({label})\n");
+            code.__Label(label);
         }
 
         public static void WriteGoto(Code code, ECommandType _, string label, string __)
@@ -344,6 +403,11 @@ public partial class VMTranslator
 
             code.Write($"({funName})\n"); // label
 
+            if (nParamsInt <= 0)
+            {
+                return;
+            }
+
             // push 0
             code.__DCopy("0");
             for (int i = 0; i < nParamsInt; i++)
@@ -357,6 +421,9 @@ public partial class VMTranslator
             funName = EncodeLabel(funName);
             int nParamsInt = int.Parse(nParams);
 
+            string returnAddress = code.GenAutoLabel();
+
+            code.Write($"@{returnAddress}\n");
             code.__PushA(); // push return address
 
             code.Write($"@LCL\nD=M\n");
@@ -372,12 +439,14 @@ public partial class VMTranslator
             code.Write($"@SP\nD=M\n@LCL\nM=D\n"); // LCL = SP
 
             code.Write($"@{funName}\n0;JMP\n"); // goto funName
+
+            code.__Label(returnAddress);
         }
 
         public static void WriteReturn(Code code, ECommandType _, string __, string ___)
         {
             code.Write($"@LCL\nAD=M\n");
-            code.__A2Temp(); // frame = LCL
+            code.__D2Temp(); // frame = LCL
 
             code.Write($"@5\nA=D-A\nD=M\n");
             code.__D2Temp(1); // return = *(frame-5)
@@ -385,12 +454,13 @@ public partial class VMTranslator
             code.__PopD();
             code.Write($"@ARG\nA=M\nM=D\n"); // pop *ARG; callee ARG = caller SP
 
-            code.Write($"@SP\nA=M\nM=D+1\n"); // SP = ARG + 1; 1 means return value
+            code.Write($"@ARG\nD=m\n");
+            code.Write($"@SP\nM=D+1\n"); // SP = ARG + 1; 1 means return value
 
-            code.Write($"@R13\nAM=M-1\nD=M\n@THAT\nD=M\n"); // THAT = *(frame-1)
-            code.Write($"@R13\nAM=M-1\nD=M\n@THIS\nM=D\n"); // THIS = *(frame-2)
-            code.Write($"@R13\nAM=M-1\nD=M\n@ARG\nM=D\n"); // ARG = *(frame-3)
-            code.Write($"@R13\nAM=M-1\nD=M\n@LCL\nM=D\n"); // LCL = *(frame-4)
+            code.Write($"@13\nAM=M-1\nD=M\n@THAT\nM=D\n"); // THAT = *(frame-1)
+            code.Write($"@13\nAM=M-1\nD=M\n@THIS\nM=D\n"); // THIS = *(frame-2)
+            code.Write($"@13\nAM=M-1\nD=M\n@ARG\nM=D\n"); // ARG = *(frame-3)
+            code.Write($"@13\nAM=M-1\nD=M\n@LCL\nM=D\n"); // LCL = *(frame-4)
 
             code.__Temp2A(1);
             code.Write($"0;JMP\n"); // goto return
