@@ -454,7 +454,7 @@ public partial class VMTranslator
             code.__PopD();
             code.Write($"@ARG\nA=M\nM=D\n"); // pop *ARG; callee ARG = caller SP
 
-            code.Write($"@ARG\nD=m\n");
+            code.Write($"@ARG\nD=M\n");
             code.Write($"@SP\nM=D+1\n"); // SP = ARG + 1; 1 means return value
 
             code.Write($"@13\nAM=M-1\nD=M\n@THAT\nM=D\n"); // THAT = *(frame-1)
