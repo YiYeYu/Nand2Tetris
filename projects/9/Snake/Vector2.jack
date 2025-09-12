@@ -21,33 +21,43 @@ class Vector2
       return Vector2.new(x, y);
    }
 
+   method int getX()
+   {
+      return x;
+   }
+
+   method int getY()
+   {
+      return y;
+   }
+
    method Vector2 set(int ax, int ay)
    {
       let x = ax;
       let y = ay;
 
-      return;
+      return this;
    }
 
    method Vector2 setByOther(Vector2 other)
    {
-      do set(other.x, other.y);
+      do set(other.getX(), other.getY());
 
-      return;
+      return this;
    }
 
-   method void move(int ax, int ay)
+   method Vector2 move(int ax, int ay)
    {
       let x = x + ax;
       let y = y + ay;
 
-      return;
+      return this;
    }
 
-   method void moveByOffeset(Vector2 offset)
+   method Vector2 moveByOffeset(Vector2 offset)
    {
-      do move(offset.x, offset.y);
+      do move(offset.getX(), offset.getY());
 
-      return;
+      return this;
    }
 }

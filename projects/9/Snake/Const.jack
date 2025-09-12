@@ -1,17 +1,37 @@
 class Const
 {
-   static int SCREEN_WIDTH = 510;
-   static int SCREEN_HEIGHT = 254;
-   
-   static int DIR_NONE = 0;
-   static int DIR_LEFT = 1;
-   static int DIR_UP = 2;
-   static int DIR_RIGHT = 3;
-   static int DIR_DOWN = 4;
+   static int SCREEN_WIDTH;
+   static int SCREEN_HEIGHT;
 
-   static char KEY_Q = "Q".charAt(0);
-   static char KEY_LEFT = 130;
-   static char KEY_UP = 131;
-   static char KEY_RIGHT = 132;
-   static char KEY_DOWN = 133;
+   static int DIR_NONE;
+   static int DIR_LEFT;
+   static int DIR_UP;
+   static int DIR_RIGHT;
+   static int DIR_DOWN;
+
+   static char KEY_Q;
+   static char KEY_LEFT;
+   static char KEY_UP;
+   static char KEY_RIGHT;
+   static char KEY_DOWN;
+
+   method void init()
+   {
+      let SCREEN_WIDTH = 510;
+      let SCREEN_HEIGHT = 254;
+      
+      let DIR_NONE = 0;
+      let DIR_LEFT = 1;
+      let DIR_UP = 2;
+      let DIR_RIGHT = 3;
+      let DIR_DOWN = 4;
+
+      let KEY_Q = 140;
+      let KEY_LEFT = 130;
+      let KEY_UP = 131;
+      let KEY_RIGHT = 132;
+      let KEY_DOWN = 133;
+
+      return;
+   }
 }

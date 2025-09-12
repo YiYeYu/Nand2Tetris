@@ -7,29 +7,58 @@
  * the Snake's size. The 'q' key is used to quit the game.
  */
 class SnakeGame {
-   field Snake Snake; // the Snake of this game
+   field Snake snake; // the Snake of this game
    field int direction; // the Snake's current direction
    field Array moveVectors;
 
+   static int SCREEN_WIDTH;
+   static int SCREEN_HEIGHT;
+
+   static int DIR_NONE;
+   static int DIR_LEFT;
+   static int DIR_UP;
+   static int DIR_RIGHT;
+   static int DIR_DOWN;
+
+   static char KEY_Q;
+   static char KEY_LEFT;
+   static char KEY_UP;
+   static char KEY_RIGHT;
+   static char KEY_DOWN;
+
    /** Constructs a new Snake game. */
    constructor SnakeGame new() {
-      // The initial Snake is located in (0,0).
-      let Snake = Snake.new(0, 0);
-      let direction = Const.DIR_RIGHT;
+      let SCREEN_WIDTH = 510;
+      let SCREEN_HEIGHT = 254;
+      
+      let DIR_NONE = 0;
+      let DIR_LEFT = 1;
+      let DIR_UP = 2;
+      let DIR_RIGHT = 3;
+      let DIR_DOWN = 4;
 
-      let moveVectors = Array.new(4);
-      moveVectors[Const.DIR_NONE] = Vector2.new(0, 0);
-      moveVectors[Const.DIR_LEFT] = Vector2.new(-1, 0);
-      moveVectors[Const.DIR_UP] = Vector2.new(0, -1);
-      moveVectors[Const.DIR_RIGHT] = Vector2.new(1, 0);
-      moveVectors[Const.DIR_DOWN] = Vector2.new(0, -1);
+      let KEY_Q = 140;
+      let KEY_LEFT = 130;
+      let KEY_UP = 131;
+      let KEY_RIGHT = 132;
+      let KEY_DOWN = 133;
+
+      let snake = Snake.new(Math.divide(SCREEN_WIDTH, 2), Math.divide(SCREEN_HEIGHT, 2));
+      let direction = DIR_NONE;
+
+      let moveVectors = Array.new(5);
+      let moveVectors[DIR_NONE] = Vector2.new(0, 0);
+      let moveVectors[DIR_LEFT] = Vector2.new(-1, 0);
+      let moveVectors[DIR_UP] = Vector2.new(0, -1);
+      let moveVectors[DIR_RIGHT] = Vector2.new(1, 0);
+      let moveVectors[DIR_DOWN] = Vector2.new(0, 1);
 
       return this;
    }
 
    /** Disposes this game. */
    method void dispose() {
-      do Snake.dispose();
+      do snake.dispose();
       do Memory.deAlloc(this);
       return;
    }
@@ -37,8 +66,8 @@ class SnakeGame {
    /** Moves the Snake in the current direction. */
    method void moveSnake() {
       var Vector2 moveVec;
-      moveVec = moveVectors[direction];
-      do Snake.move(moveVec);
+      let moveVec = moveVectors[direction];
+      do snake.move(moveVec);
       do Sys.wait(5);  // delays the next movement
       return;
    }
@@ -53,18 +82,19 @@ class SnakeGame {
          // waits for a key to be pressed
          while (key = 0) {
             let key = Keyboard.keyPressed();
+            let direction = DIR_NONE;
             do moveSnake();
          }
 
-         if (key == Const.KEY_Q)
+         if (key = KEY_Q)
          {
             let exit = true;
          }
          else
          {
-            if(key >= Const.KEY_LEFT && key <= Const.KEY_DOWN)
+            if((key > (KEY_LEFT - 1)) & (key < (KEY_DOWN + 1)))
             {
-               direction = key - Const.KEY_LEFT + 1;
+               let direction = key - KEY_LEFT + 1;
             }
          }
 
