@@ -147,8 +147,8 @@ public partial class VMTranslator
         readonly StreamWriter writer;
         readonly SymbolTable symbolTable;
         string contextFile = string.Empty;
-        WORD existFileMaxIndex = 0;
-        WORD currentFileMaxIndex = 0;
+        WORD existFileStaticCount = 0;
+        WORD currentFileStaticCount = 0;
         WORD spPtr;
         WORD heapPtr;
         WORD staticPtr;
@@ -180,15 +180,19 @@ public partial class VMTranslator
         public void SetFile(string fileName)
         {
             contextFile = fileName;
-            currentFileMaxIndex = 0;
+            currentFileStaticCount = 0;
         }
 
         public void CloseFile()
         {
+            Write($"// {contextFile} has {currentFileStaticCount} static variables, total {existFileStaticCount} static variables\n");
             writer.Flush();
             contextFile = string.Empty;
-            existFileMaxIndex += currentFileMaxIndex;
-            currentFileMaxIndex = 0;
+            if (currentFileStaticCount > 0)
+            {
+                existFileStaticCount += currentFileStaticCount;
+                currentFileStaticCount = 0;
+            }
         }
 
         void WriteInit()
@@ -488,13 +492,13 @@ public partial class VMTranslator
                     break;
                 case MEM_SEGMENT_STATIC:
                     WORD curIdex = WORD.Parse(index);
-                    if (curIdex > code.currentFileMaxIndex)
+                    if (curIdex + 1 > code.currentFileStaticCount)
                     {
-                        code.currentFileMaxIndex = curIdex;
+                        code.currentFileStaticCount = (WORD)(curIdex + 1);
                     }
                     address = MemSegmentAddr[segment];
                     code.__DCopy(index);
-                    code.Write($"@{code.existFileMaxIndex}\nD=D+A\n");
+                    code.Write($"@{code.existFileStaticCount}\nD=D+A\n");
                     code.Write($"@{address}\nAD=D+A\n");
                     break;
                 default:
