@@ -7,6 +7,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Assembler", "Assembler\Asse
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VM2Hack", "VM2Hack\VM2Hack.csproj", "{48A69496-F750-4D1C-B0DD-2898400EB724}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Compiler", "Compiler\Compiler.csproj", "{CB7D4653-21D7-440B-A5FF-83EB4D07C58F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{48A69496-F750-4D1C-B0DD-2898400EB724}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{48A69496-F750-4D1C-B0DD-2898400EB724}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{48A69496-F750-4D1C-B0DD-2898400EB724}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CB7D4653-21D7-440B-A5FF-83EB4D07C58F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CB7D4653-21D7-440B-A5FF-83EB4D07C58F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CB7D4653-21D7-440B-A5FF-83EB4D07C58F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CB7D4653-21D7-440B-A5FF-83EB4D07C58F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
