@@ -1,3 +1,4 @@
+namespace Jack;
 
 public enum Grammer
 {
@@ -63,16 +64,16 @@ public static class GrammerExtension
     public static string GetString(this Grammer grammer) => _grammer[grammer];
 }
 
-public enum TokenType
+public enum ETokenType
 {
-    KeyWord,
+    Keyword,
     Symbol,
     Identifier,
     IntegerConstant,
     StringConstant,
 }
 
-public enum Keyword
+public enum EKeyword
 {
     Class,
     Method,
@@ -98,7 +99,35 @@ public enum Keyword
 
 public static class KeywordExtension
 {
-    public static string GetString(this Keyword keyword) => keyword.ToString().ToLower();
+    static readonly Dictionary<EKeyword, string> _symbol = new()
+    {
+        { EKeyword.Class, "class" },
+        { EKeyword.Method, "method" },
+        { EKeyword.Int, "int" },
+        { EKeyword.Function, "function" },
+        { EKeyword.Boolean, "boolean" },
+        { EKeyword.Constructor, "constructor" },
+        { EKeyword.Char, "char" },
+        { EKeyword.Void, "void" },
+        { EKeyword.Var, "var" },
+        { EKeyword.Static, "static" },
+        { EKeyword.Field, "field" },
+        { EKeyword.Let, "let" },
+        { EKeyword.Do, "do" },
+        { EKeyword.If, "if" },
+        { EKeyword.Else, "else" },
+        { EKeyword.While, "while" },
+        { EKeyword.Return, "return" },
+        { EKeyword.True, "true" },
+        { EKeyword.False, "false" },
+        { EKeyword.Null, "null" },
+    };
+    static readonly Dictionary<string, EKeyword> _symbolReverse = _symbol.ToDictionary(x => x.Value, x => x.Key);
+
+    public static string GetString(this EKeyword keyword) => _symbol[keyword];
+
+    public static bool IsKeyword(this string keyword) => _symbolReverse.ContainsKey(keyword);
+    public static EKeyword GetKeyword(this string keyword) => _symbolReverse[keyword];
 }
 
 public enum SymbolType
@@ -149,8 +178,14 @@ public static class SymbolTypeExtension
         { SymbolType.Equal, "=" },
     };
 
+    static readonly Dictionary<char, SymbolType> _char = _symbol.ToDictionary(x => x.Value[0], x => x.Key);
+
 
     public static string GetString(this SymbolType symbol) => _symbol[symbol];
+    public static char GetChar(this SymbolType symbol) => GetString(symbol)[0];
+
+    public static bool IsSymbol(char c) => _char.ContainsKey(c);
+    public static SymbolType GetSymbolType(char c) => _char[c];
 }
 
 public enum ECommandType
