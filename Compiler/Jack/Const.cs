@@ -143,6 +143,23 @@ public enum ETokenType
     StringConstant,
 }
 
+public static class TokenTypeExtension
+{
+    static readonly Dictionary<ETokenType, string> _symbol = new()
+    {
+        { ETokenType.Keyword, "keyword" },
+        { ETokenType.Symbol, "symbol" },
+        { ETokenType.Identifier, "identifier" },
+        { ETokenType.IntegerConstant, "integerConstant" },
+        { ETokenType.StringConstant, "stringConstant" },
+    };
+
+    public static string GetString(this ETokenType tokenType)
+    {
+        return _symbol[tokenType];
+    }
+}
+
 public enum EKeyword
 {
     Class,
@@ -165,6 +182,7 @@ public enum EKeyword
     True,
     False,
     Null,
+    This,
 }
 
 public static class KeywordExtension
@@ -191,6 +209,7 @@ public static class KeywordExtension
         { EKeyword.True, Const.KEYWORD_TRUE },
         { EKeyword.False, Const.KEYWORD_FALSE },
         { EKeyword.Null, Const.KEYWORD_NULL },
+        { EKeyword.This, Const.KEYWORD_THIS },
     };
     static readonly Dictionary<string, EKeyword> _symbolReverse = _symbol.ToDictionary(x => x.Value, x => x.Key);
 

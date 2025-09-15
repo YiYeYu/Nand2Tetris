@@ -51,6 +51,7 @@ public class TokenEngine : ICompilationEngine
     protected void WriteToken(ETokenType tokenType, string str)
     {
         str = SecurityElement.Escape(str);
-        WriteLine($"<{tokenType.ToString().ToLower()}> {str} <{tokenType.ToString().ToLower()}>");
+        string mark = tokenType.GetString();
+        WriteLine($"<{mark}> {str} </{mark}>");
     }
 }

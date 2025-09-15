@@ -91,7 +91,7 @@ public class Parser
         }
 
         __eat();
-        return cacheCount > 0 || !reader.EndOfStream;
+        return !__isEndOfStream();
     }
 
     /// <summary>
@@ -124,7 +124,7 @@ public class Parser
         {
             tokenType = ETokenType.IntegerConstant;
             c = __collectOne();
-            while (!reader.EndOfStream && char.IsDigit((char)c))
+            while (!__isEndOfStream() && char.IsDigit((char)c))
             {
                 c = __collectOne();
             }
@@ -140,7 +140,7 @@ public class Parser
         }
         else if (char.IsLetter((char)c))
         {
-            while (!reader.EndOfStream && char.IsLetter((char)c))
+            while (!__isEndOfStream() && char.IsLetter((char)c))
             {
                 c = __collectOne();
             }
@@ -206,7 +206,7 @@ public class Parser
 
     void __eat()
     {
-        if (reader.EndOfStream)
+        if (__isEndOfStream())
         {
             return;
         }
@@ -221,7 +221,7 @@ public class Parser
     void __eatWhite()
     {
         var c = __peek();
-        while (!reader.EndOfStream && char.IsWhiteSpace((char)c))
+        while (!__isEndOfStream() && char.IsWhiteSpace((char)c))
         {
             c = __eatOne();
         }
@@ -253,7 +253,7 @@ public class Parser
 
         // Console.WriteLine($"eat comment from {CurrentLine}:{currentColumn} {(char)__peek()} {(char)nextChar}");
 
-        __read();
+        __read(); // '/'
 
         var c = __read();
         if (c == COMMENT_START)
@@ -264,12 +264,17 @@ public class Parser
         }
         else if (c == COMMENT_INNER)
         {
-            // 多行注释
-            while (c != COMMENT_START)
+            c = __peek();
+            do
             {
+                while (c != COMMENT_INNER)
+                {
+                    c = __eatOne();
+                }
                 c = __eatOne();
-            }
-            __read();
+            } while (c != COMMENT_START);
+
+            __read(); // '/'
         }
         else
         {
@@ -292,9 +297,10 @@ public class Parser
         currentColumn++;
         if (cacheCount > 0)
         {
+            var cacheChar = cache[cacheIndex];
             cacheCount--;
             cacheIndex = (cacheIndex + 1) % cache.Length;
-            return cache[cacheIndex];
+            return cacheChar;
         }
         return reader.Read();
     }
@@ -311,14 +317,24 @@ public class Parser
             throw new ArgumentOutOfRangeException(nameof(index));
         }
 
-        for (int i = cacheCount; i <= index; i++)
+        for (int i = cacheCount; i < index; i++)
         {
-            cache[cacheIndex] = reader.Read();
-            cacheIndex = (cacheIndex + 1) % cache.Length;
+            int wrapIndex = (cacheIndex + i) % cache.Length;
+            cache[wrapIndex] = reader.Read();
             cacheCount++;
         }
 
+        if (index >= cacheCount)
+        {
+            return reader.Peek();
+        }
+
         return cache[(cacheIndex + index) % cache.Length];
+    }
+
+    bool __isEndOfStream()
+    {
+        return cacheCount <= 0 && reader.EndOfStream;
     }
 
     #endregion
