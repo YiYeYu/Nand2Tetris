@@ -8,7 +8,7 @@ public class Compiler
     public const string INPUT_PATTERN = "*" + INPUT_SUBFIX;
     public const string OUTPUT_SUBFIX = ".vm";
 
-    public void Compile(string path)
+    public void Compile(string path, string? engineName = nameof(Engine))
     {
         var fileAttr = File.GetAttributes(path);
         var isDir = (fileAttr & FileAttributes.Directory) == FileAttributes.Directory;
@@ -35,20 +35,23 @@ public class Compiler
             }
 
             SymbolTable symbolTable = new SymbolTable();
-            CompilationEngine engine = new(symbolTable);
+
+            Type compilationEngineType = Type.GetType($"Jack.{engineName}") ?? throw new Exception($"Engine not found: {engineName}");
+
+            ICompilationEngine engine = (ICompilationEngine?)Activator.CreateInstance(compilationEngineType, new object[] { symbolTable }) ?? throw new Exception($"Engine not found: {engineName}");
 
             __compile(fileInfos, engine);
         }
         catch (Exception e)
         {
-            Console.WriteLine("Compile failed: {0}", e);
+            Console.WriteLine("Compile failed: {0}, {1}", e.Data["file"], e);
         }
 
         Console.WriteLine("Compile success: {0}", isDir);
         return;
     }
 
-    void __compile(FileInfo[] fileInfos, CompilationEngine engine)
+    void __compile(FileInfo[] fileInfos, ICompilationEngine engine)
     {
         foreach (var fileInfo in fileInfos)
         {
@@ -56,7 +59,7 @@ public class Compiler
         }
     }
 
-    void __compile(FileInfo fileInfo, CompilationEngine engine)
+    void __compile(FileInfo fileInfo, ICompilationEngine engine)
     {
         try
         {
@@ -70,8 +73,9 @@ public class Compiler
 
             engine.Compile(reader, writer);
         }
-        catch (System.Exception)
+        catch (System.Exception e)
         {
+            e.Data["file"] = fileInfo.FullName;
             throw;
         }
     }

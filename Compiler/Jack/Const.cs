@@ -1,5 +1,57 @@
 namespace Jack;
 
+public static class Const
+{
+    public const string SYMBOL_LEFT_BRACE = "{";
+    public const string SYMBOL_RIGHT_BRACE = "}";
+    public const string SYMBOL_LEFT_PARENTHESES = "(";
+    public const string SYMBOL_RIGHT_PARENTHESES = ")";
+    public const string SYMBOL_LEFT_BRACKET = "[";
+    public const string SYMBOL_RIGHT_BRACKET = "]";
+    public const string SYMBOL_COMMA = ",";
+    public const string SYMBOL_DOT = ".";
+    public const string SYMBOL_SEMICOLON = ";";
+    public const string SYMBOL_ADD = "+";
+    public const string SYMBOL_SUB = "-";
+    public const string SYMBOL_NOT = "~";
+    public const string SYMBOL_MULTIPLY = "*";
+    public const string SYMBOL_DIVIDE = "/";
+    public const string SYMBOL_AND = "&";
+    public const string SYMBOL_OR = "|";
+    public const string SYMBOL_LESS_THAN = "<";
+    public const string SYMBOL_GREATER_THAN = ">";
+    public const string SYMBOL_EQUAL = "=";
+    public const string SYMBOL_NEW_LINE = "\n";
+
+    public const string KEYWORD_CLASS = "class";
+    public const string KEYWORD_METHOD = "method";
+    public const string KEYWORD_FUNCTION = "function";
+    public const string KEYWORD_CONSTRUCTOR = "constructor";
+    public const string KEYWORD_INT = "int";
+    public const string KEYWORD_BOOLEAN = "boolean";
+    public const string KEYWORD_CHAR = "char";
+    public const string KEYWORD_VOID = "void";
+    public const string KEYWORD_VAR = "var";
+    public const string KEYWORD_STATIC = "static";
+    public const string KEYWORD_FIELD = "field";
+    public const string KEYWORD_LET = "let";
+    public const string KEYWORD_DO = "do";
+    public const string KEYWORD_IF = "if";
+    public const string KEYWORD_ELSE = "else";
+    public const string KEYWORD_WHILE = "while";
+    public const string KEYWORD_RETURN = "return";
+    public const string KEYWORD_TRUE = "true";
+    public const string KEYWORD_FALSE = "false";
+    public const string KEYWORD_NULL = "null";
+    public const string KEYWORD_THIS = "this";
+
+    public static readonly string[] BinaryOps = { SYMBOL_ADD, SYMBOL_SUB, SYMBOL_MULTIPLY, SYMBOL_DIVIDE, SYMBOL_AND, SYMBOL_OR, SYMBOL_LESS_THAN, SYMBOL_GREATER_THAN, SYMBOL_EQUAL };
+    public static readonly string[] UnaryOps = { SYMBOL_SUB, SYMBOL_NOT };
+
+    public static readonly string[] KeywordConstants = { KEYWORD_TRUE, KEYWORD_FALSE, KEYWORD_NULL, KEYWORD_THIS };
+
+}
+
 public enum Grammer
 {
     // structure
@@ -10,6 +62,9 @@ public enum Grammer
     ParameterList,
     SubroutineBody,
     VarDec,
+    ClassName,
+    SubroutineName,
+    VarName,
 
     // statements
     Statements,
@@ -31,34 +86,49 @@ public enum Grammer
 
     // identifier
     Identifier,
+    IntegerConstant,
+    StringConstant,
 }
 
 public static class GrammerExtension
 {
     static readonly Dictionary<Grammer, string> _grammer = new()
     {
-        { Grammer.Class, "'class' Identifier '{' ClassVarDec* SubroutineDec* '}'"},
-        { Grammer.ClassVarDec, "('static'|'field') Type Identifier (',' Identifier)* ';'"},
-        { Grammer.Type, "'int' | 'char' | 'boolean' | Identifier"},
+        //
+        { Grammer.Class, "'class' ClassName '{' ClassVarDec* SubroutineDec* '}'"},
+        { Grammer.ClassVarDec, "('static'|'field') Type VarName (',' VarName)* ';'"},
+        { Grammer.Type, "'int' | 'char' | 'boolean' | ClassName"},
         { Grammer.SubroutineDec, "('constructor'|'function'|'method') ('void' | Type) SubroutineName '(' ParameterList ')' SubroutineBody"},
-        { Grammer.ParameterList, "(Type Identifier (',' Type Identifier)*)?"},
+        { Grammer.ParameterList, "(Type VarName (',' Type VarName)*)?"},
         { Grammer.SubroutineBody, "'{' VarDec* Statements '}'"},
-        { Grammer.VarDec, "'var' Type Identifier (',' Identifier)* ';'"},
+        { Grammer.VarDec, "'var' Type VarName (',' VarName)* ';'"},
+
+        { Grammer.ClassName, "Identifier"},
+        { Grammer.SubroutineName, "Identifier"},
+        { Grammer.VarName, "Identifier"},
+
+        //
         { Grammer.Statements, "Statement*"},
         { Grammer.Statement, "LetStatement | IfStatement | WhileStatement | DoStatement | ReturnStatement"},
-        { Grammer.LetStatement, "'let' Identifier ('[' Expression ']')? '=' Expression ';'"},
+        { Grammer.LetStatement, "'let' VarName ('[' Expression ']')? '=' Expression ';'"},
         { Grammer.IfStatement, "'if' '(' Expression ')' '{' Statements '}' ('else' '{' Statement '}')?"},
         { Grammer.WhileStatement, "'while' '(' Expression ')' '{' Statements '}'"},
         { Grammer.DoStatement, "'do' SubroutineCall ';'"},
         { Grammer.ReturnStatement, "'return' Expression? ';'"},
+
+        //
         { Grammer.Expression, "Term (BinaryOp Term)*"},
-        { Grammer.Term, "IntegerConstant | StringConstant | KeywordConstant | Identifier | Identifier '[' Expression ']' | SubroutineCall | '(' Expression ')' | UnaryOp Term"},
-        { Grammer.SubroutineCall, "Identifier '(' ExpressionList ')'"},
+        { Grammer.Term, "IntegerConstant | StringConstant | KeywordConstant | VarName | VarName '[' Expression ']' | SubroutineCall | '(' Expression ')' | UnaryOp Term"},
+        { Grammer.SubroutineCall, "SubroutineName '(' ExpressionList ')'"},
         { Grammer.ExpressionList, "(Expression (',' Expression)*)?"},
         { Grammer.BinaryOp, "'+' | '-' | '*' | '/' | '&' | '|' | '<' | '>' | '='"},
         { Grammer.UnaryOp, "'-' | '~'"},
         { Grammer.KeywordConstant, "'true' | 'false' | 'null' | 'this'"},
+
+        //
         { Grammer.Identifier, "[a-zA-Z_][a-zA-Z0-9_]*"},
+        { Grammer.IntegerConstant, "[0-9]+"},
+        { Grammer.StringConstant, "\"[^\"]*\""},
     };
 
     public static string GetString(this Grammer grammer) => _grammer[grammer];
@@ -101,26 +171,26 @@ public static class KeywordExtension
 {
     static readonly Dictionary<EKeyword, string> _symbol = new()
     {
-        { EKeyword.Class, "class" },
-        { EKeyword.Method, "method" },
-        { EKeyword.Int, "int" },
-        { EKeyword.Function, "function" },
-        { EKeyword.Boolean, "boolean" },
-        { EKeyword.Constructor, "constructor" },
-        { EKeyword.Char, "char" },
-        { EKeyword.Void, "void" },
-        { EKeyword.Var, "var" },
-        { EKeyword.Static, "static" },
-        { EKeyword.Field, "field" },
-        { EKeyword.Let, "let" },
-        { EKeyword.Do, "do" },
-        { EKeyword.If, "if" },
-        { EKeyword.Else, "else" },
-        { EKeyword.While, "while" },
-        { EKeyword.Return, "return" },
-        { EKeyword.True, "true" },
-        { EKeyword.False, "false" },
-        { EKeyword.Null, "null" },
+        { EKeyword.Class, Const.KEYWORD_CLASS },
+        { EKeyword.Method, Const.KEYWORD_METHOD },
+        { EKeyword.Int, Const.KEYWORD_INT },
+        { EKeyword.Function, Const.KEYWORD_FUNCTION },
+        { EKeyword.Boolean, Const.KEYWORD_BOOLEAN },
+        { EKeyword.Constructor, Const.KEYWORD_CONSTRUCTOR },
+        { EKeyword.Char, Const.KEYWORD_CHAR },
+        { EKeyword.Void, Const.KEYWORD_VOID },
+        { EKeyword.Var, Const.KEYWORD_VAR },
+        { EKeyword.Static, Const.KEYWORD_STATIC },
+        { EKeyword.Field, Const.KEYWORD_FIELD },
+        { EKeyword.Let, Const.KEYWORD_LET },
+        { EKeyword.Do, Const.KEYWORD_DO },
+        { EKeyword.If, Const.KEYWORD_IF },
+        { EKeyword.Else, Const.KEYWORD_ELSE },
+        { EKeyword.While, Const.KEYWORD_WHILE },
+        { EKeyword.Return, Const.KEYWORD_RETURN },
+        { EKeyword.True, Const.KEYWORD_TRUE },
+        { EKeyword.False, Const.KEYWORD_FALSE },
+        { EKeyword.Null, Const.KEYWORD_NULL },
     };
     static readonly Dictionary<string, EKeyword> _symbolReverse = _symbol.ToDictionary(x => x.Value, x => x.Key);
 
@@ -139,7 +209,7 @@ public enum SymbolType
     LeftBracket,
     RightBracket,
     Comma,
-    Period,
+    Dot,
     Semicolon,
     Plus,
     Minus,
@@ -151,41 +221,40 @@ public enum SymbolType
     LessThan,
     GreaterThan,
     Equal,
+    NewLine,
 }
 
 public static class SymbolTypeExtension
 {
     static readonly Dictionary<SymbolType, string> _symbol = new()
     {
-        { SymbolType.LeftBrace, "{" },
-        { SymbolType.RightBrace, "}" },
-        { SymbolType.LeftParenthesis, "(" },
-        { SymbolType.RightParenthesis, ")" },
-        { SymbolType.LeftBracket, "[" },
-        { SymbolType.RightBracket, "]" },
-        { SymbolType.Comma, "," },
-        { SymbolType.Period, "." },
-        { SymbolType.Semicolon, ";" },
-        { SymbolType.Plus, "+" },
-        { SymbolType.Minus, "-" },
-        { SymbolType.Not, "~" },
-        { SymbolType.Multiply, "*" },
-        { SymbolType.Divide, "/" },
-        { SymbolType.And, "&" },
-        { SymbolType.Or, "|" },
-        { SymbolType.LessThan, "<" },
-        { SymbolType.GreaterThan, ">" },
-        { SymbolType.Equal, "=" },
+        { SymbolType.LeftBrace, Const.SYMBOL_LEFT_BRACE },
+        { SymbolType.RightBrace, Const.SYMBOL_RIGHT_BRACE },
+        { SymbolType.LeftParenthesis, Const.SYMBOL_LEFT_PARENTHESES },
+        { SymbolType.RightParenthesis, Const.SYMBOL_RIGHT_PARENTHESES },
+        { SymbolType.LeftBracket, Const.SYMBOL_LEFT_BRACKET },
+        { SymbolType.RightBracket, Const.SYMBOL_RIGHT_BRACKET },
+        { SymbolType.Comma, Const.SYMBOL_COMMA },
+        { SymbolType.Dot, Const.SYMBOL_DOT },
+        { SymbolType.Semicolon, Const.SYMBOL_SEMICOLON },
+        { SymbolType.Plus, Const.SYMBOL_ADD },
+        { SymbolType.Minus, Const.SYMBOL_SUB },
+        { SymbolType.Not, Const.SYMBOL_NOT },
+        { SymbolType.Multiply, Const.SYMBOL_MULTIPLY },
+        { SymbolType.Divide, Const.SYMBOL_DIVIDE },
+        { SymbolType.And, Const.SYMBOL_AND },
+        { SymbolType.Or, Const.SYMBOL_OR },
+        { SymbolType.LessThan, Const.SYMBOL_LESS_THAN },
+        { SymbolType.GreaterThan, Const.SYMBOL_GREATER_THAN },
+        { SymbolType.Equal, Const.SYMBOL_EQUAL },
+        { SymbolType.NewLine, Const.SYMBOL_NEW_LINE },
     };
 
+    static readonly Dictionary<string, SymbolType> _string = _symbol.ToDictionary(x => x.Value, x => x.Key);
     static readonly Dictionary<char, SymbolType> _char = _symbol.ToDictionary(x => x.Value[0], x => x.Key);
 
-
-    public static string GetString(this SymbolType symbol) => _symbol[symbol];
-    public static char GetChar(this SymbolType symbol) => GetString(symbol)[0];
-
     public static bool IsSymbol(char c) => _char.ContainsKey(c);
-    public static SymbolType GetSymbolType(char c) => _char[c];
+    public static SymbolType GetSymbolType(string c) => _string[c];
 }
 
 public enum ECommandType

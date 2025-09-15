@@ -45,19 +45,19 @@ public class SymbolTable
         return 0;
     }
 
-    public VarInfo GetVarInfo(string name)
+    public VarInfo? GetVarInfo(string name)
     {
         return default;
     }
 
     public VarKind KindOf(string name)
     {
-        return VarKind.Static;
+        return VarKind.None;
     }
 
     public IdentifierType TypeOf(string name)
     {
-        return default;
+        return IdentifierType.Empty;
     }
 
     public int IndexOf(string name)

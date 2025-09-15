@@ -7,4 +7,4 @@ if (args.Length <= 0)
 }
 
 var compiler = new Jack.Compiler();
-compiler.Compile(args[0]);
+compiler.Compile(args[0], args?[1]);
