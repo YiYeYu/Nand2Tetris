@@ -27,13 +27,14 @@ public class EngineBase : ICompilationEngine
 
     public event EventHandler<EventArgs>? OnStart;
     public event EventHandler<EventArgs>? OnEnd;
+    public event EventHandler<EventArgs>? OnAdvance;
     public event EventHandler<ConsumeEventArgs>? OnConsume;
     public event EventHandler<GrammerEventArgs>? OnEnterGrammer;
     public event EventHandler<GrammerEventArgs>? OnLeaveGrammer;
 
     protected readonly SymbolTable symbolTable;
     protected StreamReader? reader;
-    protected StreamWriter? writer;
+    protected StreamWriter writer = null!;
 
     protected PeekParser parser = null!;
 
@@ -163,10 +164,10 @@ public class EngineBase : ICompilationEngine
     protected virtual void CompileClass()
     {
         MatchKeyword(Const.KEYWORD_CLASS);
-        CompileClassName();
+        CompileGammer(Grammer.ClassName);
         MatchSymbol(Const.SYMBOL_LEFT_BRACE);
-        CompileClassVarDec();
-        CompileSubroutineDec();
+        CompileGammer(Grammer.ClassVarDec);
+        CompileGammer(Grammer.SubroutineDec);
         MatchSymbol(Const.SYMBOL_RIGHT_BRACE);
     }
 
@@ -174,34 +175,59 @@ public class EngineBase : ICompilationEngine
     {
         if (!TryMatchGroup(ETokenType.Keyword, out _, false, Const.KEYWORD_STATIC, Const.KEYWORD_FIELD))
         {
-            throw CreateException($"CompileClassVarDec failed");
+            return;
         }
+
         Consume();
 
-        CompileType();
-        CompileVarName();
+        CompileGammer(Grammer.Type);
+        CompileGammer(Grammer.VarName);
 
-        Advandce();
-        while (TryMatch(Const.SYMBOL_COMMA, ETokenType.Symbol, true))
+        while (parser.Peek(1, out var tokenInfo) && tokenInfo.TokenType == ETokenType.Symbol && tokenInfo.Token == Const.SYMBOL_COMMA)
         {
             Consume();
 
-            CompileType();
-            CompileVarName();
+            CompileGammer(Grammer.Type);
+            CompileGammer(Grammer.VarName);
         }
 
-        MatchSymbol(Const.SYMBOL_SEMICOLON, true);
+        MatchSymbol(Const.SYMBOL_SEMICOLON);
+    }
+
+    protected bool TryMatchType(out Parser.TokenInfo tokenInfo)
+    {
+        if (TryMatchGroup(ETokenType.Keyword, out var token, false, Const.KEYWORD_INT, Const.KEYWORD_CHAR, Const.KEYWORD_BOOLEAN))
+        {
+            Debug.Assert(token != null);
+
+            tokenInfo = new Parser.TokenInfo(ETokenType.Keyword, token);
+            return true;
+        }
+
+        if (TryMatchIdentifier())
+        {
+            tokenInfo = new Parser.TokenInfo(ETokenType.Identifier, parser.Token());
+            return true;
+        }
+
+        tokenInfo = default;
+        return false;
     }
 
     protected virtual void CompileType()
     {
-        if (TryMatchGroup(ETokenType.Keyword, out _, false, Const.KEYWORD_INT, Const.KEYWORD_CHAR, Const.KEYWORD_BOOLEAN))
+        if (!TryMatchType(out var tokenInfo))
+        {
+            throw CreateException($"CompileType failed");
+        }
+
+        if (tokenInfo.TokenType == ETokenType.Keyword)
         {
             Consume();
             return;
         }
 
-        CompileClassName();
+        CompileGammer(Grammer.ClassName);
     }
 
     protected virtual void CompileSubroutineDec()
@@ -212,65 +238,59 @@ public class EngineBase : ICompilationEngine
         }
         Consume();
 
-        if (!TryMatchGroup(ETokenType.Keyword, out _, false, Const.KEYWORD_VOID))
+        if (TryMatchGroup(ETokenType.Keyword, out _, false, Const.KEYWORD_VOID))
         {
-            CompileType();
+            Consume();
+        }
+        else
+        {
+            CompileGammer(Grammer.Type);
         }
 
-        CompileSubroutineName();
-        MatchSymbol(Const.SYMBOL_LEFT_BRACE);
-        CompileParameterList();
-        MatchSymbol(Const.SYMBOL_RIGHT_BRACE);
-        CompileSubroutineBody();
+        CompileGammer(Grammer.SubroutineName);
+        MatchSymbol(Const.SYMBOL_LEFT_PARENTHESES);
+        CompileGammer(Grammer.ParameterList);
+        MatchSymbol(Const.SYMBOL_RIGHT_PARENTHESES);
+        CompileGammer(Grammer.SubroutineBody);
     }
 
     protected virtual void CompileParameterList()
     {
-        bool isEmpty = false;
-        try
-        {
-            CompileType();
-        }
-        catch (CompileException)
-        {
-            isEmpty = true;
-        }
-
-        if (isEmpty)
+        if (!TryMatchType(out _))
         {
             return;
         }
 
-        CompileVarName();
+        CompileGammer(Grammer.VarName);
 
         while (TryMatch(Const.SYMBOL_COMMA, ETokenType.Symbol))
         {
             Consume();
-            CompileType();
-            CompileVarName();
+            CompileGammer(Grammer.Type);
+            CompileGammer(Grammer.VarName);
         }
     }
 
     protected virtual void CompileSubroutineBody()
     {
         MatchSymbol(Const.SYMBOL_LEFT_BRACE);
-        while (TryMatchGroup(ETokenType.Keyword, out _, false, Const.KEYWORD_STATIC, Const.KEYWORD_FIELD))
+        while (TryMatchGroup(ETokenType.Keyword, out _, false, Const.KEYWORD_VAR))
         {
-            CompileVarDec();
+            CompileGammer(Grammer.VarDec);
         }
-        CompileStatements();
+        CompileGammer(Grammer.Statements);
         MatchSymbol(Const.SYMBOL_RIGHT_BRACE);
     }
 
     protected virtual void CompileVarDec()
     {
         MatchKeyword(Const.KEYWORD_VAR);
-        CompileType();
-        CompileVarName();
+        CompileGammer(Grammer.Type);
+        CompileGammer(Grammer.VarName);
         while (TryMatch(Const.SYMBOL_COMMA, ETokenType.Symbol))
         {
             Consume();
-            CompileVarName();
+            CompileGammer(Grammer.VarName);
         }
         MatchSymbol(Const.SYMBOL_SEMICOLON);
     }
@@ -294,15 +314,14 @@ public class EngineBase : ICompilationEngine
 
     protected virtual void CompileStatements()
     {
-        while (TryMatchGroup(ETokenType.Keyword, out _, false, Const.KEYWORD_LET, Const.KEYWORD_IF, Const.KEYWORD_WHILE, Const.KEYWORD_DO, Const.KEYWORD_RETURN))
+        while (TryMatchGroup(ETokenType.Keyword, out _, false, Const.Statements))
         {
-            Consume();
-            CompileStatement();
+            CompileGammer(Grammer.Statement);
         }
     }
     protected virtual void CompileStatement()
     {
-        if (!TryMatchGroup(ETokenType.Keyword, out var str, false, Const.KEYWORD_LET, Const.KEYWORD_IF, Const.KEYWORD_WHILE, Const.KEYWORD_DO, Const.KEYWORD_RETURN))
+        if (!TryMatchGroup(ETokenType.Keyword, out var str, false, Const.Statements))
         {
             throw CreateException($"CompileStatement failed");
         }
@@ -310,19 +329,19 @@ public class EngineBase : ICompilationEngine
         switch (str)
         {
             case Const.KEYWORD_LET:
-                CompileLetStatement();
+                CompileGammer(Grammer.LetStatement);
                 break;
             case Const.KEYWORD_IF:
-                CompileIfStatement();
+                CompileGammer(Grammer.IfStatement);
                 break;
             case Const.KEYWORD_WHILE:
-                CompileWhileStatement();
+                CompileGammer(Grammer.WhileStatement);
                 break;
             case Const.KEYWORD_DO:
-                CompileDoStatement();
+                CompileGammer(Grammer.DoStatement);
                 break;
             case Const.KEYWORD_RETURN:
-                CompileReturnStatement();
+                CompileGammer(Grammer.ReturnStatement);
                 break;
             default:
                 throw CreateException($"CompileStatement failed, unknown statement: {str}");
@@ -332,15 +351,15 @@ public class EngineBase : ICompilationEngine
     protected virtual void CompileLetStatement()
     {
         MatchKeyword(Const.KEYWORD_LET);
-        CompileVarName();
+        CompileGammer(Grammer.VarName);
         if (TryMatch(Const.SYMBOL_LEFT_BRACKET, ETokenType.Symbol))
         {
             Consume();
-            CompileExpression();
+            CompileGammer(Grammer.Expression);
             MatchSymbol(Const.SYMBOL_RIGHT_BRACKET);
         }
         MatchSymbol(Const.SYMBOL_EQUAL);
-        CompileExpression();
+        CompileGammer(Grammer.Expression);
         MatchSymbol(Const.SYMBOL_SEMICOLON);
     }
 
@@ -348,16 +367,16 @@ public class EngineBase : ICompilationEngine
     {
         MatchKeyword(Const.KEYWORD_IF);
         MatchSymbol(Const.SYMBOL_LEFT_PARENTHESES);
-        CompileExpression();
+        CompileGammer(Grammer.Expression);
         MatchSymbol(Const.SYMBOL_RIGHT_PARENTHESES);
         MatchSymbol(Const.SYMBOL_LEFT_BRACE);
-        CompileStatements();
+        CompileGammer(Grammer.Statements);
         MatchSymbol(Const.SYMBOL_RIGHT_BRACE);
         if (TryMatchGroup(ETokenType.Keyword, out _, false, Const.KEYWORD_ELSE))
         {
             Consume();
             MatchSymbol(Const.SYMBOL_LEFT_BRACE);
-            CompileStatements();
+            CompileGammer(Grammer.Statements);
             MatchSymbol(Const.SYMBOL_RIGHT_BRACE);
         }
     }
@@ -366,17 +385,17 @@ public class EngineBase : ICompilationEngine
     {
         MatchKeyword(Const.KEYWORD_WHILE);
         MatchSymbol(Const.SYMBOL_LEFT_PARENTHESES);
-        CompileExpression();
+        CompileGammer(Grammer.Expression);
         MatchSymbol(Const.SYMBOL_RIGHT_PARENTHESES);
         MatchSymbol(Const.SYMBOL_LEFT_BRACE);
-        CompileStatements();
+        CompileGammer(Grammer.Statements);
         MatchSymbol(Const.SYMBOL_RIGHT_BRACE);
     }
 
     protected virtual void CompileDoStatement()
     {
         MatchKeyword(Const.KEYWORD_DO);
-        CompileSubroutineCall();
+        CompileGammer(Grammer.SubroutineCall);
         MatchSymbol(Const.SYMBOL_SEMICOLON);
     }
 
@@ -385,7 +404,7 @@ public class EngineBase : ICompilationEngine
         MatchKeyword(Const.KEYWORD_RETURN);
         if (!TryMatch(Const.SYMBOL_SEMICOLON, ETokenType.Symbol))
         {
-            CompileExpression();
+            CompileGammer(Grammer.Expression);
         }
         MatchSymbol(Const.SYMBOL_SEMICOLON);
     }
@@ -394,12 +413,12 @@ public class EngineBase : ICompilationEngine
 
     protected virtual void CompileExpression()
     {
-        CompileTerm();
+        CompileGammer(Grammer.Term);
 
         while (TryMatchGroup(ETokenType.Symbol, out _, false, Const.BinaryOps))
         {
             Consume();
-            CompileTerm();
+            CompileGammer(Grammer.Term);
         }
     }
 
@@ -407,30 +426,34 @@ public class EngineBase : ICompilationEngine
     {
         if (TryMatchTokenType(ETokenType.IntegerConstant))
         {
-            CompileIntegerConstant();
+            CompileGammer(Grammer.IntegerConstant);
         }
         else if (TryMatchTokenType(ETokenType.StringConstant))
         {
-            CompileStringConstant();
+            CompileGammer(Grammer.StringConstant);
         }
         else if (TryMatchGroup(ETokenType.Keyword, out _, false, Const.KeywordConstants))
         {
-            CompileKeywordConstant();
+            CompileGammer(Grammer.KeywordConstant);
         }
         else if (TryMatchIdentifier())
         {
             parser.Peek(1, out var nextToken);
-            if (nextToken.Token == Const.SYMBOL_LEFT_PARENTHESES)
+            if (nextToken.Token == Const.SYMBOL_DOT)
             {
-                CompileSubroutineCall();
+                CompileGammer(Grammer.SubroutineCall);
+            }
+            else if (nextToken.Token == Const.SYMBOL_LEFT_PARENTHESES)
+            {
+                CompileGammer(Grammer.SubroutineCall);
             }
             else
             {
-                CompileVarName();
+                CompileGammer(Grammer.VarName);
                 if (TryMatch(Const.SYMBOL_LEFT_BRACKET, ETokenType.Symbol))
                 {
                     Consume();
-                    CompileExpression();
+                    CompileGammer(Grammer.Expression);
                     MatchSymbol(Const.SYMBOL_RIGHT_BRACKET);
                 }
             }
@@ -438,13 +461,13 @@ public class EngineBase : ICompilationEngine
         else if (TryMatch(Const.SYMBOL_LEFT_PARENTHESES, ETokenType.Symbol))
         {
             Consume();
-            CompileExpression();
+            CompileGammer(Grammer.Expression);
             MatchSymbol(Const.SYMBOL_RIGHT_PARENTHESES);
         }
         else if (TryMatchGroup(ETokenType.Symbol, out _, false, Const.UnaryOps))
         {
             Consume();
-            CompileTerm();
+            CompileGammer(Grammer.Term);
         }
         else
         {
@@ -454,22 +477,32 @@ public class EngineBase : ICompilationEngine
 
     protected virtual void CompileSubroutineCall()
     {
-        CompileIdentifier();
+        parser.Advandce();
+        parser.Peek(1, out var nextToken);
+        if (nextToken.Token == Const.SYMBOL_DOT)
+        {
+            CompileGammer(Grammer.Identifier); // className or varName
+            MatchSymbol(Const.SYMBOL_DOT);
+        }
+
+        CompileGammer(Grammer.SubroutineName);
         MatchSymbol(Const.SYMBOL_LEFT_PARENTHESES);
-        CompileExpressionList();
+        CompileGammer(Grammer.ExpressionList);
         MatchSymbol(Const.SYMBOL_RIGHT_PARENTHESES);
     }
 
     protected virtual void CompileExpressionList()
     {
-        if (!TryMatch(Const.SYMBOL_RIGHT_PARENTHESES, ETokenType.Symbol))
+        if (TryMatch(Const.SYMBOL_RIGHT_PARENTHESES, ETokenType.Symbol))
         {
-            CompileExpression();
-            while (TryMatch(Const.SYMBOL_COMMA, ETokenType.Symbol))
-            {
-                Consume();
-                CompileExpression();
-            }
+            return;
+        }
+
+        CompileGammer(Grammer.Expression);
+        while (TryMatch(Const.SYMBOL_COMMA, ETokenType.Symbol))
+        {
+            Consume();
+            CompileGammer(Grammer.Expression);
         }
     }
 
@@ -544,9 +577,9 @@ public class EngineBase : ICompilationEngine
         Match(c.ToString(), ETokenType.Symbol, ignoreAdvance);
     }
 
-    protected bool TryMatchIdentifier()
+    protected bool TryMatchIdentifier(bool ignoreAdvance = false)
     {
-        return TryMatchTokenType(ETokenType.Identifier);
+        return TryMatchTokenType(ETokenType.Identifier, ignoreAdvance);
     }
 
     protected string MatchIdentifier()
@@ -667,7 +700,14 @@ public class EngineBase : ICompilationEngine
 
     protected void Advandce()
     {
+        if (!parser.HasMoreTokens())
+        {
+            return;
+        }
+
         parser.Advandce();
+
+        OnAdvance?.Invoke(this, EventArgs.Empty);
     }
 
     protected void Consume()
@@ -679,7 +719,17 @@ public class EngineBase : ICompilationEngine
 
     protected CompileException CreateException(string message)
     {
-        return new CompileException($"{parser.CurrentLine}: token: {parser.Token()}({parser.TokenType()}), {message}");
+        return new CompileException($"{parser.CurrentLine}:{parser.CurrentColumn}: token: {parser.Token()}({parser.TokenType()}), {message}");
+    }
+
+    protected void Write(string str)
+    {
+        writer.Write(str);
+    }
+
+    protected void WriteLine(string str)
+    {
+        writer.WriteLine(str);
     }
 
     #endregion

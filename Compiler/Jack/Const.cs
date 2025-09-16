@@ -50,6 +50,7 @@ public static class Const
 
     public static readonly string[] KeywordConstants = { KEYWORD_TRUE, KEYWORD_FALSE, KEYWORD_NULL, KEYWORD_THIS };
 
+    public static readonly string[] Statements = { KEYWORD_LET, KEYWORD_IF, KEYWORD_WHILE, KEYWORD_DO, KEYWORD_RETURN };
 }
 
 public enum Grammer
@@ -131,11 +132,53 @@ public static class GrammerExtension
         { Grammer.StringConstant, "\"[^\"]*\""},
     };
 
+    static readonly Dictionary<Grammer, string> _grammerName = new()
+    {
+        //
+        { Grammer.Class, "class"},
+        { Grammer.ClassVarDec, "classVarDec"},
+        { Grammer.Type, "type"},
+        { Grammer.SubroutineDec, "subroutineDec"},
+        { Grammer.ParameterList, "parameterList"},
+        { Grammer.SubroutineBody, "subroutineBody"},
+        { Grammer.VarDec, "varDec"},
+
+        { Grammer.ClassName, "className"},
+        { Grammer.SubroutineName, "subroutineName"},
+        { Grammer.VarName, "varName"},
+
+        //
+        { Grammer.Statements, "statements"},
+        { Grammer.Statement, "statement"},
+        { Grammer.LetStatement, "letStatement"},
+        { Grammer.IfStatement, "ifStatement"},
+        { Grammer.WhileStatement, "whileStatement"},
+        { Grammer.DoStatement, "doStatement"},
+        { Grammer.ReturnStatement, "returnStatement"},
+
+        //
+        { Grammer.Expression, "expression"},
+        { Grammer.Term, "term"},
+        { Grammer.SubroutineCall, "subroutineCall"},
+        { Grammer.ExpressionList, "expressionList"},
+        { Grammer.BinaryOp, "binaryOp"},
+        { Grammer.UnaryOp, "unaryOp"},
+        { Grammer.KeywordConstant, "keywordConstant"},
+
+        //
+        { Grammer.Identifier, "identifier"},
+        { Grammer.IntegerConstant, "integerConstant"},
+        { Grammer.StringConstant, "stringConstant"},
+    };
+
     public static string GetString(this Grammer grammer) => _grammer[grammer];
+
+    public static string GetXmlName(this Grammer grammer) => _grammerName[grammer];
 }
 
 public enum ETokenType
 {
+    None,
     Keyword,
     Symbol,
     Identifier,

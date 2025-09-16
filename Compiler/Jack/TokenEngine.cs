@@ -11,7 +11,7 @@ public class TokenEngine : ICompilationEngine
 {
     protected StreamReader? reader;
     protected StreamWriter writer = null!;
-    protected Parser parser = null!;
+    protected PeekParser parser = null!;
 
     public TokenEngine(SymbolTable symbolTable) { }
 
@@ -20,7 +20,7 @@ public class TokenEngine : ICompilationEngine
         this.reader = reader;
         this.writer = writer;
 
-        parser = new Parser(reader);
+        parser = new PeekParser(reader);
         parser.Reset();
 
         WriteLine("<tokens>");
@@ -32,6 +32,7 @@ public class TokenEngine : ICompilationEngine
     {
         while (parser.HasMoreTokens())
         {
+            // parser.Peek(Random.Shared.Next(parser.Capacity), out _);
             parser.Advandce();
             WriteToken(parser.TokenType(), parser.Token());
             parser.Consume();

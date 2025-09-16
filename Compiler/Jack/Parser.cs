@@ -7,6 +7,8 @@ namespace Jack;
 
 public class Parser
 {
+    public record struct TokenInfo(ETokenType TokenType, string Token);
+
     enum CommentType
     {
         None,
@@ -33,6 +35,8 @@ public class Parser
             currentColumn = 0;
         }
     }
+    public int CurrentColumn { get => currentColumn; protected set => currentColumn = value; }
+    protected bool IsConsumed { get => isConsumed; }
 
     readonly StreamReader reader;
 
@@ -85,11 +89,6 @@ public class Parser
     /// <returns></returns>
     public virtual bool HasMoreTokens()
     {
-        if (!isConsumed)
-        {
-            return true;
-        }
-
         __eat();
         return !__isEndOfStream();
     }
@@ -128,7 +127,7 @@ public class Parser
             {
                 c = __collectOne();
             }
-            if (char.IsLetter((char)c))
+            if (__isIdentifierLetter((char)c))
             {
                 throw new Exception($"line {currentLine}: invalid integer: {tokenBuilder} with trailing char: {c}");
             }
@@ -138,13 +137,14 @@ public class Parser
             tokenType = ETokenType.Symbol;
             __collectOne();
         }
-        else if (char.IsLetter((char)c))
+        else if (__isIdentifierLetter((char)c))
         {
-            while (!__isEndOfStream() && char.IsLetter((char)c))
+            do
             {
                 c = __collectOne();
-            }
-            string token = Token();
+            } while (!__isEndOfStream() && __isIdentifierLetter((char)c));
+
+            string token = updateToken();
             if (KeywordExtension.IsKeyword(token))
             {
                 tokenType = ETokenType.Keyword;
@@ -156,10 +156,12 @@ public class Parser
         }
         else
         {
-            throw new Exception($"line {currentLine}, column {currentColumn}: invalid token start: {c}");
+            throw new Exception($"line {currentLine}, column {currentColumn}: invalid token start: {(char)c}:{c}");
         }
 
         isConsumed = false;
+
+        __eat();
     }
 
     public virtual void Consume()
@@ -173,6 +175,11 @@ public class Parser
     }
 
     public virtual string Token()
+    {
+        return updateToken();
+    }
+
+    private string updateToken()
     {
         if (isDirty)
         {
@@ -335,6 +342,11 @@ public class Parser
     bool __isEndOfStream()
     {
         return cacheCount <= 0 && reader.EndOfStream;
+    }
+
+    bool __isIdentifierLetter(char c)
+    {
+        return char.IsLetter(c) || c == '_';
     }
 
     #endregion

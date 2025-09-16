@@ -7,18 +7,20 @@ namespace Jack;
 
 public class PeekParser : Parser
 {
-    public record struct TokenInfo(ETokenType TokenType, string Token);
-
     public int Capacity => tokens.Length;
+    public int CacheCount { get => tokenCount; }
+    public bool IsCacheConsumed { get => isCacheConsumed; }
 
     readonly TokenInfo[] tokens;
     int tokenIndex = 0;
     int tokenCount = 0;
     TokenInfo CurrentToken => tokens[tokenIndex];
+    bool isCacheConsumed;
 
     public PeekParser(StreamReader reader, int capacity = 2) : base(reader)
     {
         tokens = new TokenInfo[capacity];
+        isCacheConsumed = true;
     }
 
     ~PeekParser()
@@ -27,28 +29,58 @@ public class PeekParser : Parser
 
     public bool Peek(int index, out TokenInfo tokenInfo)
     {
+        if (index == tokenCount)
+        {
+            tokenInfo = new TokenInfo(base.TokenType(), base.Token());
+            return true;
+        }
+
         if (index >= Capacity)
         {
             throw new ArgumentOutOfRangeException(nameof(index));
         }
 
-        if (index >= tokenCount)
+        if (index > tokenCount)
         {
-            base.Consume();
-            for (int i = tokenCount; i <= index; i++)
+            if (!base.HasMoreTokens())
             {
+                tokenInfo = default;
+                return false;
+            }
+
+            if (tokenCount == 0)
+            {
+                isCacheConsumed = base.IsConsumed;
+            }
+
+            var oldConsumed = base.IsConsumed;
+
+            for (int i = tokenCount; i < index; i++)
+            {
+                tokenInfo = new TokenInfo(base.TokenType(), base.Token());
+                tokens[(tokenIndex + i) % Capacity] = tokenInfo;
+
+                tokenCount++;
+
+                base.Consume();
                 if (!base.HasMoreTokens())
                 {
                     tokenInfo = default;
                     return false;
                 }
-
                 base.Advandce();
+            }
 
-                tokens[(tokenIndex + i) % Capacity] = new TokenInfo(base.TokenType(), base.Token());
-
+            if (oldConsumed)
+            {
                 base.Consume();
             }
+        }
+
+        if (index == tokenCount)
+        {
+            tokenInfo = new TokenInfo(base.TokenType(), base.Token());
+            return true;
         }
 
         tokenInfo = tokens[(tokenIndex + index) % Capacity];
@@ -76,6 +108,14 @@ public class PeekParser : Parser
     {
         if (tokenCount > 0)
         {
+            if (!isCacheConsumed)
+            {
+                return;
+            }
+
+            tokenIndex = (tokenIndex + 1) % Capacity;
+            tokenCount--;
+            isCacheConsumed = false;
             return;
         }
 
@@ -86,8 +126,7 @@ public class PeekParser : Parser
     {
         if (tokenCount > 0)
         {
-            tokenIndex = (tokenIndex + 1) % Capacity;
-            tokenCount--;
+            isCacheConsumed = true;
             return;
         }
 
