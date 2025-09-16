@@ -166,35 +166,56 @@ public class EngineBase : ICompilationEngine
         MatchKeyword(Const.KEYWORD_CLASS);
         CompileGammer(Grammer.ClassName);
         MatchSymbol(Const.SYMBOL_LEFT_BRACE);
-        CompileGammer(Grammer.ClassVarDec);
-        CompileGammer(Grammer.SubroutineDec);
+        while (TryMatchGrammarClassVarDec(out _))
+        {
+            CompileGammer(Grammer.ClassVarDec);
+        }
+        while (TryMatchGrammarSubroutineDec(out _))
+        {
+            CompileGammer(Grammer.SubroutineDec);
+        }
         MatchSymbol(Const.SYMBOL_RIGHT_BRACE);
+    }
+
+    protected bool TryMatchGrammarClassVarDec(out Parser.TokenInfo tokenInfo)
+    {
+        bool isMatch = TryMatchGroup(ETokenType.Keyword, out var token, Const.KEYWORD_STATIC, Const.KEYWORD_FIELD);
+
+        tokenInfo = new Parser.TokenInfo(ETokenType.Keyword, token ?? string.Empty);
+
+        return isMatch;
     }
 
     protected virtual void CompileClassVarDec()
     {
-        if (!TryMatchGroup(ETokenType.Keyword, out _, Const.KEYWORD_STATIC, Const.KEYWORD_FIELD))
+        if (!TryMatchGrammarClassVarDec(out _))
         {
             return;
         }
 
-        Consume();
+        Consume(); // static | field
 
         CompileGammer(Grammer.Type);
         CompileGammer(Grammer.VarName);
 
-        while (parser.Peek(1, out var tokenInfo) && tokenInfo.TokenType == ETokenType.Symbol && tokenInfo.Token == Const.SYMBOL_COMMA)
+        Advandce();
+        while (parser.TokenType() == ETokenType.Symbol && parser.Token() == Const.SYMBOL_COMMA)
         {
-            Consume();
+            Consume(); // ','
 
-            CompileGammer(Grammer.Type);
+            // if (TryMatchGrammarType(out _))
+            // {
+            //     CompileGammer(Grammer.Type);
+            // }
             CompileGammer(Grammer.VarName);
+
+            parser.Advandce();
         }
 
         MatchSymbol(Const.SYMBOL_SEMICOLON);
     }
 
-    protected bool TryMatchType(out Parser.TokenInfo tokenInfo)
+    protected bool TryMatchGrammarType(out Parser.TokenInfo tokenInfo)
     {
         if (TryMatchGroup(ETokenType.Keyword, out var token, Const.KEYWORD_INT, Const.KEYWORD_CHAR, Const.KEYWORD_BOOLEAN))
         {
@@ -216,7 +237,7 @@ public class EngineBase : ICompilationEngine
 
     protected virtual void CompileType()
     {
-        if (!TryMatchType(out var tokenInfo))
+        if (!TryMatchGrammarType(out var tokenInfo))
         {
             throw CreateException($"CompileType failed");
         }
@@ -230,9 +251,18 @@ public class EngineBase : ICompilationEngine
         CompileGammer(Grammer.ClassName);
     }
 
+    protected bool TryMatchGrammarSubroutineDec(out Parser.TokenInfo tokenInfo)
+    {
+        bool isMatch = TryMatchGroup(ETokenType.Keyword, out var token, Const.KEYWORD_CONSTRUCTOR, Const.KEYWORD_FUNCTION, Const.KEYWORD_METHOD);
+
+        tokenInfo = new Parser.TokenInfo(ETokenType.Keyword, token ?? string.Empty);
+
+        return isMatch;
+    }
+
     protected virtual void CompileSubroutineDec()
     {
-        if (!TryMatchGroup(ETokenType.Keyword, out _, Const.KEYWORD_CONSTRUCTOR, Const.KEYWORD_FUNCTION, Const.KEYWORD_METHOD))
+        if (!TryMatchGrammarSubroutineDec(out _))
         {
             throw CreateException($"CompileSubroutineDec failed");
         }
@@ -256,11 +286,12 @@ public class EngineBase : ICompilationEngine
 
     protected virtual void CompileParameterList()
     {
-        if (!TryMatchType(out _))
+        if (!TryMatchGrammarType(out _))
         {
             return;
         }
 
+        CompileGammer(Grammer.Type);
         CompileGammer(Grammer.VarName);
 
         while (TryMatch(Const.SYMBOL_COMMA, ETokenType.Symbol))
@@ -552,16 +583,6 @@ public class EngineBase : ICompilationEngine
     {
         MatchStringConstant();
     }
-
-    #endregion
-
-    #region overwrite
-
-    // protected virtual void OnStart() { }
-    // protected virtual void OnEnd() { }
-    // protected virtual void OnConsume() { }
-    // protected virtual void OnEnterGrammar(Grammer grammar) { }
-    // protected virtual void OnLeaveGramar(Grammer grammar) { }
 
     #endregion
 

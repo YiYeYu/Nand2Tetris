@@ -13,7 +13,7 @@ public class GrammarEngine : EngineBase, ICompilationEngine
         Grammer.Type,
         Grammer.ClassName,
         Grammer.VarName,
-        Grammer.ClassVarDec,
+        // Grammer.ClassVarDec,
         Grammer.SubroutineName,
         Grammer.Statement,
         Grammer.SubroutineCall,
