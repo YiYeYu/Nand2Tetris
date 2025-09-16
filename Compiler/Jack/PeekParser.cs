@@ -104,22 +104,22 @@ public class PeekParser : Parser
     /// <summary>
     /// 步进读取下一条指令
     /// </summary>
-    public override void Advandce()
+    public override bool Advandce()
     {
         if (tokenCount > 0)
         {
             if (!isCacheConsumed)
             {
-                return;
+                return false;
             }
 
             tokenIndex = (tokenIndex + 1) % Capacity;
             tokenCount--;
             isCacheConsumed = false;
-            return;
+            return true;
         }
 
-        base.Advandce();
+        return base.Advandce();
     }
 
     public override void Consume()

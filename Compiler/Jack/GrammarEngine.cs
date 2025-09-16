@@ -13,6 +13,16 @@ public class GrammarEngine : EngineBase, ICompilationEngine
         Grammer.Type,
         Grammer.ClassName,
         Grammer.VarName,
+        Grammer.ClassVarDec,
+        Grammer.SubroutineName,
+        Grammer.Statement,
+        Grammer.SubroutineCall,
+
+        //
+        Grammer.Identifier,
+        Grammer.IntegerConstant,
+        Grammer.StringConstant,
+        Grammer.KeywordConstant,
     };
 
     const string indent = "  ";
@@ -65,15 +75,15 @@ public class GrammarEngine : EngineBase, ICompilationEngine
         {
             WriteIndent();
             WriteLine($"<{getMark(e.Grammer)}>");
+            Depth++;
         }
-        Depth++;
     }
 
     void __onLeaveGrammer(object? sender, GrammerEventArgs e)
     {
-        Depth--;
         if (!ignoreGrammers.Contains(e.Grammer))
         {
+            Depth--;
             WriteIndent();
             WriteLine($"</{getMark(e.Grammer)}>");
         }

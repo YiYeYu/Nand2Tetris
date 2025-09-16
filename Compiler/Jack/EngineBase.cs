@@ -173,7 +173,7 @@ public class EngineBase : ICompilationEngine
 
     protected virtual void CompileClassVarDec()
     {
-        if (!TryMatchGroup(ETokenType.Keyword, out _, false, Const.KEYWORD_STATIC, Const.KEYWORD_FIELD))
+        if (!TryMatchGroup(ETokenType.Keyword, out _, Const.KEYWORD_STATIC, Const.KEYWORD_FIELD))
         {
             return;
         }
@@ -196,7 +196,7 @@ public class EngineBase : ICompilationEngine
 
     protected bool TryMatchType(out Parser.TokenInfo tokenInfo)
     {
-        if (TryMatchGroup(ETokenType.Keyword, out var token, false, Const.KEYWORD_INT, Const.KEYWORD_CHAR, Const.KEYWORD_BOOLEAN))
+        if (TryMatchGroup(ETokenType.Keyword, out var token, Const.KEYWORD_INT, Const.KEYWORD_CHAR, Const.KEYWORD_BOOLEAN))
         {
             Debug.Assert(token != null);
 
@@ -232,13 +232,13 @@ public class EngineBase : ICompilationEngine
 
     protected virtual void CompileSubroutineDec()
     {
-        if (!TryMatchGroup(ETokenType.Keyword, out _, false, Const.KEYWORD_CONSTRUCTOR, Const.KEYWORD_FUNCTION, Const.KEYWORD_METHOD))
+        if (!TryMatchGroup(ETokenType.Keyword, out _, Const.KEYWORD_CONSTRUCTOR, Const.KEYWORD_FUNCTION, Const.KEYWORD_METHOD))
         {
             throw CreateException($"CompileSubroutineDec failed");
         }
         Consume();
 
-        if (TryMatchGroup(ETokenType.Keyword, out _, false, Const.KEYWORD_VOID))
+        if (TryMatchGroup(ETokenType.Keyword, out _, Const.KEYWORD_VOID))
         {
             Consume();
         }
@@ -274,7 +274,7 @@ public class EngineBase : ICompilationEngine
     protected virtual void CompileSubroutineBody()
     {
         MatchSymbol(Const.SYMBOL_LEFT_BRACE);
-        while (TryMatchGroup(ETokenType.Keyword, out _, false, Const.KEYWORD_VAR))
+        while (TryMatchGroup(ETokenType.Keyword, out _, Const.KEYWORD_VAR))
         {
             CompileGammer(Grammer.VarDec);
         }
@@ -314,14 +314,14 @@ public class EngineBase : ICompilationEngine
 
     protected virtual void CompileStatements()
     {
-        while (TryMatchGroup(ETokenType.Keyword, out _, false, Const.Statements))
+        while (TryMatchGroup(ETokenType.Keyword, out _, Const.Statements))
         {
             CompileGammer(Grammer.Statement);
         }
     }
     protected virtual void CompileStatement()
     {
-        if (!TryMatchGroup(ETokenType.Keyword, out var str, false, Const.Statements))
+        if (!TryMatchGroup(ETokenType.Keyword, out var str, Const.Statements))
         {
             throw CreateException($"CompileStatement failed");
         }
@@ -372,7 +372,7 @@ public class EngineBase : ICompilationEngine
         MatchSymbol(Const.SYMBOL_LEFT_BRACE);
         CompileGammer(Grammer.Statements);
         MatchSymbol(Const.SYMBOL_RIGHT_BRACE);
-        if (TryMatchGroup(ETokenType.Keyword, out _, false, Const.KEYWORD_ELSE))
+        if (TryMatchGroup(ETokenType.Keyword, out _, Const.KEYWORD_ELSE))
         {
             Consume();
             MatchSymbol(Const.SYMBOL_LEFT_BRACE);
@@ -415,7 +415,7 @@ public class EngineBase : ICompilationEngine
     {
         CompileGammer(Grammer.Term);
 
-        while (TryMatchGroup(ETokenType.Symbol, out _, false, Const.BinaryOps))
+        while (TryMatchGroup(ETokenType.Symbol, out _, Const.BinaryOps))
         {
             Consume();
             CompileGammer(Grammer.Term);
@@ -432,7 +432,7 @@ public class EngineBase : ICompilationEngine
         {
             CompileGammer(Grammer.StringConstant);
         }
-        else if (TryMatchGroup(ETokenType.Keyword, out _, false, Const.KeywordConstants))
+        else if (TryMatchGroup(ETokenType.Keyword, out _, Const.KeywordConstants))
         {
             CompileGammer(Grammer.KeywordConstant);
         }
@@ -464,7 +464,7 @@ public class EngineBase : ICompilationEngine
             CompileGammer(Grammer.Expression);
             MatchSymbol(Const.SYMBOL_RIGHT_PARENTHESES);
         }
-        else if (TryMatchGroup(ETokenType.Symbol, out _, false, Const.UnaryOps))
+        else if (TryMatchGroup(ETokenType.Symbol, out _, Const.UnaryOps))
         {
             Consume();
             CompileGammer(Grammer.Term);
@@ -477,7 +477,7 @@ public class EngineBase : ICompilationEngine
 
     protected virtual void CompileSubroutineCall()
     {
-        parser.Advandce();
+        Advandce();
         parser.Peek(1, out var nextToken);
         if (nextToken.Token == Const.SYMBOL_DOT)
         {
@@ -508,7 +508,7 @@ public class EngineBase : ICompilationEngine
 
     protected virtual void CompileBinaryOp()
     {
-        if (!TryMatchGroup(ETokenType.Symbol, out _, false, Const.BinaryOps))
+        if (!TryMatchGroup(ETokenType.Symbol, out _, Const.BinaryOps))
         {
             throw CreateException($"CompileBinaryOp failed");
         }
@@ -518,7 +518,7 @@ public class EngineBase : ICompilationEngine
 
     protected virtual void CompileUnaryOp()
     {
-        if (!TryMatchGroup(ETokenType.Symbol, out _, false, Const.UnaryOps))
+        if (!TryMatchGroup(ETokenType.Symbol, out _, Const.UnaryOps))
         {
             throw CreateException($"CompileUnaryOp failed");
         }
@@ -528,7 +528,7 @@ public class EngineBase : ICompilationEngine
 
     protected virtual void CompileKeywordConstant()
     {
-        if (!TryMatchGroup(ETokenType.Keyword, out _, false, Const.KeywordConstants))
+        if (!TryMatchGroup(ETokenType.Keyword, out _, Const.KeywordConstants))
         {
             throw CreateException($"CompileKeywordConstant failed");
         }
@@ -567,19 +567,19 @@ public class EngineBase : ICompilationEngine
 
     #region helper
 
-    protected void MatchKeyword(string str, bool ignoreAdvance = false)
+    protected void MatchKeyword(string str)
     {
-        Match(str, ETokenType.Keyword, ignoreAdvance);
+        Match(str, ETokenType.Keyword);
     }
 
-    protected void MatchSymbol(string c, bool ignoreAdvance = false)
+    protected void MatchSymbol(string c)
     {
-        Match(c.ToString(), ETokenType.Symbol, ignoreAdvance);
+        Match(c.ToString(), ETokenType.Symbol);
     }
 
-    protected bool TryMatchIdentifier(bool ignoreAdvance = false)
+    protected bool TryMatchIdentifier()
     {
-        return TryMatchTokenType(ETokenType.Identifier, ignoreAdvance);
+        return TryMatchTokenType(ETokenType.Identifier);
     }
 
     protected string MatchIdentifier()
@@ -630,11 +630,11 @@ public class EngineBase : ICompilationEngine
         return parser.Token();
     }
 
-    protected void Match(string str, ETokenType tokenType, bool ignoreAdvance = false)
+    protected void Match(string str, ETokenType tokenType)
     {
         Debug.Assert(parser != null);
 
-        if (!TryMatch(str, tokenType, ignoreAdvance))
+        if (!TryMatch(str, tokenType))
         {
             throw CreateException($"Match failed, expected: {str}({tokenType})");
         }
@@ -659,11 +659,11 @@ public class EngineBase : ICompilationEngine
         return true;
     }
 
-    protected bool TryMatch(string str, ETokenType tokenType, bool ignoreAdvance = false)
+    protected bool TryMatch(string str, ETokenType tokenType)
     {
         Debug.Assert(parser != null);
 
-        if (!TryMatchTokenType(tokenType, ignoreAdvance))
+        if (!TryMatchTokenType(tokenType))
         {
             return false;
         }
@@ -676,12 +676,12 @@ public class EngineBase : ICompilationEngine
         return string.Equals(parser.Token(), str, StringComparison.Ordinal);
     }
 
-    protected bool TryMatchGroup(ETokenType tokenType, out string? value, bool ignoreAdvance = false, params string[] str)
+    protected bool TryMatchGroup(ETokenType tokenType, out string? value, params string[] str)
     {
         Debug.Assert(parser != null);
 
         value = null;
-        if (!TryMatchTokenType(tokenType, ignoreAdvance))
+        if (!TryMatchTokenType(tokenType))
         {
             return false;
         }
@@ -705,7 +705,11 @@ public class EngineBase : ICompilationEngine
             return;
         }
 
-        parser.Advandce();
+        var ok = parser.Advandce();
+        if (!ok)
+        {
+            return;
+        }
 
         OnAdvance?.Invoke(this, EventArgs.Empty);
     }
@@ -729,7 +733,8 @@ public class EngineBase : ICompilationEngine
 
     protected void WriteLine(string str)
     {
-        writer.WriteLine(str);
+        writer.Write(str);
+        writer.Write('\n');
     }
 
     #endregion

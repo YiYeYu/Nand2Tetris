@@ -96,11 +96,11 @@ public class Parser
     /// <summary>
     /// 步进读取下一条指令
     /// </summary>
-    public virtual void Advandce()
+    public virtual bool Advandce()
     {
         if (!isConsumed)
         {
-            return;
+            return false;
         }
 
         isDirty = true;
@@ -162,6 +162,8 @@ public class Parser
         isConsumed = false;
 
         __eat();
+
+        return true;
     }
 
     public virtual void Consume()
