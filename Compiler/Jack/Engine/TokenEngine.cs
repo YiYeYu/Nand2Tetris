@@ -13,7 +13,7 @@ public class TokenEngine : ICompilationEngine
     protected StreamWriter writer = null!;
     protected PeekParser parser = null!;
 
-    public TokenEngine(SymbolTable symbolTable) { }
+    public TokenEngine() { }
 
     public void Compile(StreamReader reader, StreamWriter writer)
     {

@@ -34,11 +34,9 @@ public class Compiler
                 return;
             }
 
-            SymbolTable symbolTable = new SymbolTable();
-
             Type compilationEngineType = Type.GetType($"Jack.{engineName}") ?? throw new Exception($"Engine not found: {engineName}");
 
-            ICompilationEngine engine = (ICompilationEngine?)Activator.CreateInstance(compilationEngineType, new object[] { symbolTable }) ?? throw new Exception($"Engine not found: {engineName}");
+            ICompilationEngine engine = (ICompilationEngine?)Activator.CreateInstance(compilationEngineType) ?? throw new Exception($"Engine not found: {engineName}");
 
             __compile(fileInfos, engine);
         }

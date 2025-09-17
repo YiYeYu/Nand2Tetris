@@ -32,15 +32,15 @@ public class EngineBase : ICompilationEngine
     public event EventHandler<GrammerEventArgs>? OnEnterGrammer;
     public event EventHandler<GrammerEventArgs>? OnLeaveGrammer;
 
-    protected readonly SymbolTable symbolTable;
     protected StreamReader? reader;
     protected StreamWriter writer = null!;
 
     protected PeekParser parser = null!;
 
-    public EngineBase(SymbolTable symbolTable)
+    protected SymbolTable symbolTable = new();
+
+    public EngineBase()
     {
-        this.symbolTable = symbolTable;
     }
 
     ~EngineBase()

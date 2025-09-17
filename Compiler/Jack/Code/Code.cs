@@ -33,26 +33,20 @@ public class Code
         {ECommandType.C_RETURN, WriteReturn},
     };
 
-    readonly SymbolTable symbolTable;
-    string contextFile = string.Empty;
+    readonly StreamWriter writer;
 
-    public Code(SymbolTable symbolTable)
+    public Code(StreamWriter writer)
     {
-        this.symbolTable = symbolTable;
+        this.writer = writer;
     }
 
     ~Code()
     {
     }
 
-    public void SetFile(string fileName)
+    void Write(string word)
     {
-        contextFile = fileName;
-    }
-
-    public void CloseFile()
-    {
-        contextFile = string.Empty;
+        writer.Write(word);
     }
 
     public void WriteCommand(ECommandType cmd, string arg1, string arg2)
@@ -62,46 +56,7 @@ public class Code
 
     public static void WriteArithmetic(Code code, ECommandType _, string cmd, string __)
     {
-        switch (cmd)
-        {
-            case ARITHMETIC_NEG:
-            case ARITHMETIC_NOT:
-                break;
-            case ARITHMETIC_ADD:
-            case ARITHMETIC_SUB:
-            case ARITHMETIC_EQ:
-            case ARITHMETIC_GT:
-            case ARITHMETIC_LT:
-            case ARITHMETIC_AND:
-            case ARITHMETIC_OR:
-                break;
-            default:
-                throw new ArgumentException($"unsupported cmd {cmd}");
-        }
-
-        switch (cmd)
-        {
-            case ARITHMETIC_NEG:
-                break;
-            case ARITHMETIC_NOT:
-                break;
-            case ARITHMETIC_ADD:
-                break;
-            case ARITHMETIC_SUB:
-                break;
-            case ARITHMETIC_AND:
-                break;
-            case ARITHMETIC_OR:
-                break;
-            case ARITHMETIC_GT:
-                break;
-            case ARITHMETIC_LT:
-                break;
-            case ARITHMETIC_EQ:
-                break;
-            default:
-                throw new ArgumentException($"unsupported cmd {cmd}");
-        }
+        code.Write($"{cmd}\n");
     }
 
     /// <summary>
@@ -115,33 +70,41 @@ public class Code
     /// <exception cref="ArgumentException"></exception>
     public static void WritePush(Code code, ECommandType _, string segment, string index)
     {
+        code.Write($"push {segment} {index}\n");
     }
 
     public static void WritePop(Code code, ECommandType _, string segment, string index)
     {
+        code.Write($"pop {segment} {index}\n");
     }
 
     public static void WriteLabel(Code code, ECommandType _, string label, string __)
     {
+        code.Write($"label {label}\n");
     }
 
     public static void WriteGoto(Code code, ECommandType _, string label, string __)
     {
+        code.Write($"goto {label}\n");
     }
 
     public static void WriteIf(Code code, ECommandType _, string label, string __)
     {
+        code.Write($"if-goto {label}\n");
     }
 
     public static void WriteFunction(Code code, ECommandType _, string funName, string nParams)
     {
+        code.Write($"function {funName} {nParams}\n");
     }
 
     public static void WriteCall(Code code, ECommandType _, string funName, string nParams)
     {
+        code.Write($"call {funName} {nParams}\n");
     }
 
     public static void WriteReturn(Code code, ECommandType _, string __, string ___)
     {
+        code.Write("return\n");
     }
 }

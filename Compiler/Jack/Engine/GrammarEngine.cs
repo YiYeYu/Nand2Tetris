@@ -46,7 +46,7 @@ public class GrammarEngine : EngineBase, ICompilationEngine
     }
     string currentIndent = string.Empty;
 
-    public GrammarEngine(SymbolTable symbolTable) : base(symbolTable)
+    public GrammarEngine()
     {
         OnAdvance += __onAdvance;
         OnConsume += __onConsume;
