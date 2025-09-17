@@ -1,0 +1,167 @@
+// C_PUSH: constant, 3030
+@3030
+D=A
+@SP
+A=M
+M=D
+@SP
+M=M+1
+// C_POP: pointer, 0
+@0
+D=A
+@3
+AD=D+A
+@R13
+M=D
+@SP
+AM=M-1
+D=M
+@R13
+A=M
+M=D
+// C_PUSH: constant, 3040
+@3040
+D=A
+@SP
+A=M
+M=D
+@SP
+M=M+1
+// C_POP: pointer, 1
+@1
+D=A
+@3
+AD=D+A
+@R13
+M=D
+@SP
+AM=M-1
+D=M
+@R13
+A=M
+M=D
+// C_PUSH: constant, 32
+@32
+D=A
+@SP
+A=M
+M=D
+@SP
+M=M+1
+// C_POP: this, 2
+@2
+D=A
+@THIS
+AD=D+M
+@R13
+M=D
+@SP
+AM=M-1
+D=M
+@R13
+A=M
+M=D
+// C_PUSH: constant, 46
+@46
+D=A
+@SP
+A=M
+M=D
+@SP
+M=M+1
+// C_POP: that, 6
+@6
+D=A
+@THAT
+AD=D+M
+@R13
+M=D
+@SP
+AM=M-1
+D=M
+@R13
+A=M
+M=D
+// C_PUSH: pointer, 0
+@0
+D=A
+@3
+AD=D+A
+D=M
+@SP
+A=M
+M=D
+@SP
+M=M+1
+// C_PUSH: pointer, 1
+@1
+D=A
+@3
+AD=D+A
+D=M
+@SP
+A=M
+M=D
+@SP
+M=M+1
+// C_ARITHMETIC: add, 
+@SP
+AM=M-1
+D=M
+@SP
+AM=M-1
+A=M
+D=D+A
+@SP
+A=M
+M=D
+@SP
+M=M+1
+// C_PUSH: this, 2
+@2
+D=A
+@THIS
+AD=D+M
+D=M
+@SP
+A=M
+M=D
+@SP
+M=M+1
+// C_ARITHMETIC: sub, 
+@SP
+AM=M-1
+D=M
+@SP
+AM=M-1
+A=M
+D=A-D
+@SP
+A=M
+M=D
+@SP
+M=M+1
+// C_PUSH: that, 6
+@6
+D=A
+@THAT
+AD=D+M
+D=M
+@SP
+A=M
+M=D
+@SP
+M=M+1
+// C_ARITHMETIC: add, 
+@SP
+AM=M-1
+D=M
+@SP
+AM=M-1
+A=M
+D=D+A
+@SP
+A=M
+M=D
+@SP
+M=M+1
