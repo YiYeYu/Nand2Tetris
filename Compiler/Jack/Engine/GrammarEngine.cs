@@ -45,8 +45,6 @@ public class GrammarEngine : EngineBase, ICompilationEngine
         }
     }
     string currentIndent = string.Empty;
-    Stack<Grammer> grammerStack = new Stack<Grammer>();
-    Grammer currentGrammer => grammerStack.Count == 0 ? Grammer.Class : grammerStack.Peek();
 
     public GrammarEngine()
     {
@@ -68,8 +66,6 @@ public class GrammarEngine : EngineBase, ICompilationEngine
 
     void __onEnterGrammer(object? sender, GrammerEventArgs e)
     {
-        grammerStack.Push(e.Grammer);
-
         if (isDebug)
         {
             Console.WriteLine($"enter grammer: {e.Grammer}, depth: {Depth}, token: {parser.Token()}");
@@ -96,8 +92,6 @@ public class GrammarEngine : EngineBase, ICompilationEngine
         {
             Console.WriteLine($"leave grammer: {e.Grammer}, depth: {Depth}, token: {parser.Token()}");
         }
-
-        grammerStack.Pop();
     }
 
     void WriteIndent()
@@ -110,7 +104,7 @@ public class GrammarEngine : EngineBase, ICompilationEngine
         str = SecurityElement.Escape(str);
         string mark = getMark(tokenType);
         WriteLine($"<{mark}> {str} </{mark}>");
-        if (currentGrammer == Grammer.Identifier)
+        if (CurrentGrammer == Grammer.Identifier)
         {
             var info = symbolTable.GetVarInfo(str);
             WriteIndent();

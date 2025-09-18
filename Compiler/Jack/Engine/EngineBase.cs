@@ -25,10 +25,19 @@ public class EngineBase : ICompilationEngine
         public Grammer Grammer { get; set; }
     }
 
+    public class DefineEventArgs : EventArgs
+    {
+        public DefineEventArgs(Symbol symbol, SymbolKind kind) { Symbol = symbol; Kind = kind; }
+        public Symbol Symbol { get; set; }
+        public SymbolKind Kind { get; set; }
+    }
+
     public event EventHandler<EventArgs>? OnStart;
     public event EventHandler<EventArgs>? OnEnd;
     public event EventHandler<EventArgs>? OnAdvance;
     public event EventHandler<ConsumeEventArgs>? OnConsume;
+    public event EventHandler<DefineEventArgs>? OnDefine;
+    public event EventHandler<EventArgs>? OnEndDefine;
     public event EventHandler<GrammerEventArgs>? OnEnterGrammer;
     public event EventHandler<GrammerEventArgs>? OnLeaveGrammer;
 
@@ -47,8 +56,44 @@ public class EngineBase : ICompilationEngine
         get => lastType ?? throw new ArgumentNullException(nameof(lastType));
     }
 
+    protected readonly List<Symbol> symbolStack = new();
+    protected Symbol CurrentSymbol => symbolStack.Peek();
+
+    protected readonly List<Grammer> grammerStack = new();
+    protected Grammer CurrentGrammer => grammerStack.Peek();
+
     public EngineBase()
     {
+        OnEnterGrammer += (_, e) => grammerStack.Push(e.Grammer);
+        OnLeaveGrammer += (_, e) => grammerStack.Pop();
+
+        OnDefine += (_, e) =>
+        {
+            switch (CurrentGrammer)
+            {
+                case Grammer.ClassVarDec:
+                    ClassSymbol? classSymbol = CurrentSymbol as ClassSymbol ?? throw new ArgumentNullException(nameof(CurrentSymbol));
+                    classSymbol.AddVariable(e.Symbol as VariableSymbol ?? throw new ArgumentNullException(nameof(e.Symbol)));
+                    break;
+                case Grammer.SubroutineDec:
+                    classSymbol = CurrentSymbol as ClassSymbol ?? throw new ArgumentNullException(nameof(CurrentSymbol));
+                    classSymbol.AddSubroutine(e.Symbol as SubroutineSymbol ?? throw new ArgumentNullException(nameof(e.Symbol)));
+                    break;
+                case Grammer.ParameterList:
+                    var subroutineSymbol = CurrentSymbol as SubroutineSymbol ?? throw new ArgumentNullException(nameof(CurrentSymbol));
+                    subroutineSymbol.AddArgument(e.Symbol as VariableSymbol ?? throw new ArgumentNullException(nameof(e.Symbol)));
+                    break;
+                case Grammer.VarDec:
+                    subroutineSymbol = CurrentSymbol as SubroutineSymbol ?? throw new ArgumentNullException(nameof(CurrentSymbol));
+                    subroutineSymbol.AddVariable(e.Symbol as VariableSymbol ?? throw new ArgumentNullException(nameof(e.Symbol)));
+                    break;
+                default:
+                    break;
+            }
+            symbolStack.Push(e.Symbol);
+        };
+
+        OnEndDefine += (_, _) => symbolStack.Pop();
     }
 
     ~EngineBase()
@@ -199,6 +244,7 @@ public class EngineBase : ICompilationEngine
         MatchSymbol(Const.SYMBOL_RIGHT_BRACE);
 
         symbolTable.PopScope();
+        EndDefine();
     }
 
     protected bool TryMatchGrammarClassVarDec(out Parser.TokenInfo tokenInfo)
@@ -226,6 +272,7 @@ public class EngineBase : ICompilationEngine
         CompileGammer(Grammer.VarName);
 
         Define(new VariableSymbol(LastType, LastIdentifier), kind);
+        EndDefine();
 
         Advandce();
         while (parser.TokenType() == ETokenType.Symbol && parser.Token() == Const.SYMBOL_COMMA)
@@ -239,6 +286,7 @@ public class EngineBase : ICompilationEngine
             CompileGammer(Grammer.VarName);
 
             Define(new VariableSymbol(LastType, LastIdentifier), kind);
+            EndDefine();
 
             parser.Advandce();
         }
@@ -288,6 +336,7 @@ public class EngineBase : ICompilationEngine
             // predefine type
             var symbol = new ClassSymbol(LastIdentifier);
             Define(symbol, SymbolKind.Class | SymbolKind.Other);
+            EndDefine();
             type = symbol;
         }
         SetLastType(type);
@@ -314,28 +363,40 @@ public class EngineBase : ICompilationEngine
 
     protected virtual void CompileSubroutineDec()
     {
-        if (!TryMatchGrammarSubroutineDec(out _))
+        if (!TryMatchGrammarSubroutineDec(out var kindTokenInfo))
         {
             throw CreateException($"CompileSubroutineDec failed");
         }
-        Consume();
+        Consume(); // constructor | function | method
 
-        symbolTable.StartSubroutine(LastIdentifier);
+        SymbolKind kind = kindTokenInfo.Token == Const.KEYWORD_CONSTRUCTOR ? SymbolKind.Constructor : kindTokenInfo.Token == Const.KEYWORD_FUNCTION ? SymbolKind.Function : SymbolKind.Method;
 
-        if (TryMatchGroup(ETokenType.Keyword, out _, Const.KEYWORD_VOID))
+        IType? returnType = null;
+
+        if (TryMatchGroup(ETokenType.Keyword, out var typeToken, Const.KEYWORD_VOID))
         {
-            Consume();
+            Consume(); // void
+            returnType = symbolTable.GetType(typeToken);
         }
         else
         {
             CompileGammer(Grammer.Type);
+            returnType = LastType;
         }
 
         CompileGammer(Grammer.SubroutineName);
+
+        symbolTable.StartSubroutine(LastIdentifier);
+
+        var symbol = new SubroutineSymbol(LastIdentifier, null, kind, returnType);
+        Define(symbol, kind);
+
         MatchSymbol(Const.SYMBOL_LEFT_PARENTHESES);
         CompileGammer(Grammer.ParameterList);
         MatchSymbol(Const.SYMBOL_RIGHT_PARENTHESES);
         CompileGammer(Grammer.SubroutineBody);
+
+        EndDefine();
 
         symbolTable.EndSubroutine();
     }
@@ -353,6 +414,7 @@ public class EngineBase : ICompilationEngine
         CompileGammer(Grammer.VarName);
 
         Define(new VariableSymbol(LastType, LastIdentifier), kind);
+        EndDefine();
 
         while (TryMatch(Const.SYMBOL_COMMA, ETokenType.Symbol))
         {
@@ -362,6 +424,7 @@ public class EngineBase : ICompilationEngine
             CompileGammer(Grammer.VarName);
 
             Define(new VariableSymbol(LastType, LastIdentifier), kind);
+            EndDefine();
         }
     }
 
@@ -386,6 +449,7 @@ public class EngineBase : ICompilationEngine
         CompileGammer(Grammer.VarName);
 
         Define(new VariableSymbol(LastType, LastIdentifier), kind);
+        EndDefine();
 
         while (TryMatch(Const.SYMBOL_COMMA, ETokenType.Symbol))
         {
@@ -393,6 +457,7 @@ public class EngineBase : ICompilationEngine
             CompileGammer(Grammer.VarName);
 
             Define(new VariableSymbol(LastType, LastIdentifier), kind);
+            EndDefine();
         }
 
         MatchSymbol(Const.SYMBOL_SEMICOLON);
@@ -835,6 +900,13 @@ public class EngineBase : ICompilationEngine
     protected void Define(Symbol symbol, SymbolKind kind)
     {
         symbolTable.Define(symbol, kind);
+
+        OnDefine?.Invoke(this, new DefineEventArgs(symbol, kind));
+    }
+
+    protected void EndDefine()
+    {
+        OnEndDefine?.Invoke(this, EventArgs.Empty);
     }
 
     protected CompileException CreateException(string message)

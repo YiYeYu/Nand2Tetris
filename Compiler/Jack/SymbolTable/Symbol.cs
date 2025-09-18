@@ -77,7 +77,9 @@ public record class BuildInSymbol : Symbol, ISymbolType
 
 public record class VariableSymbol : Symbol
 {
-    public VariableSymbol(ISymbolType Type, string Name) : base(Type, Name) { }
+    public VariableSymbol(ISymbolType Type, string Name, SymbolKind kind = SymbolKind.Unknown) : base(Type, Name) { Kind = kind; }
+
+    public SymbolKind Kind { get; private set; }
 }
 
 public record class ScopedSymbol : Symbol, IScope
@@ -111,7 +113,17 @@ public record class ScopedSymbol : Symbol, IScope
 
 public record class ClassSymbol : ScopedSymbol, ISymbolType
 {
+    readonly List<VariableSymbol> variables = new();
+    readonly List<SubroutineSymbol> subroutines = new();
+
     public ClassSymbol(string Name, IScope? enclosingScope = null) : base(null, Name, enclosingScope) { _type = this; }
+
+    public IList<VariableSymbol> Variables => variables;
+    public IList<SubroutineSymbol> Subroutines => subroutines;
+
+    public void AddVariable(VariableSymbol symbol) => variables.Add(symbol);
+
+    public void AddSubroutine(SubroutineSymbol symbol) => subroutines.Add(symbol);
 
     public override string ToString()
     {
@@ -121,7 +133,23 @@ public record class ClassSymbol : ScopedSymbol, ISymbolType
 
 public record class SubroutineSymbol : ScopedSymbol
 {
-    public SubroutineSymbol(string Name, IScope? enclosingScope = null) : base(null, Name, enclosingScope) { }
+    readonly List<VariableSymbol> arguments = new();
+    readonly List<VariableSymbol> variables = new();
+
+    public SubroutineSymbol(string Name, IScope? enclosingScope = null, SymbolKind kind = SymbolKind.Unknown, ISymbolType? returnType = null) : base(null, Name, enclosingScope)
+    {
+        Kind = kind;
+        ReturnType = returnType;
+    }
+
+    public SymbolKind Kind { get; private set; }
+    public ISymbolType? ReturnType { get; set; }
+
+    public IList<VariableSymbol> Arguments => arguments;
+    public IList<VariableSymbol> Variables => variables;
+
+    public void AddArgument(VariableSymbol symbol) => arguments.Add(symbol);
+    public void AddVariable(VariableSymbol symbol) => variables.Add(symbol);
 
     public override string ToString()
     {

@@ -71,9 +71,13 @@ public class SymbolTable
     /// Static和Field标识符作用域为整个类，Arg和Var标识符作用域为当前子程序
     /// </summary>
     /// <param name="symbol"></param>
-    public void Define(Symbol symbol, SymbolKind kind)
+    public VarInfo Define(Symbol symbol, SymbolKind kind)
     {
-        Define(new VarInfo(symbol, kind, VarCount(kind)));
+        var info = new VarInfo(symbol, kind, VarCount(kind));
+
+        Define(info);
+
+        return info;
     }
 
     void Define(VarInfo symbol)
@@ -92,8 +96,13 @@ public class SymbolTable
         return (WORD)currentScope.Symbols.Count(s => KindOf(s) == kind);
     }
 
-    public IType? GetType(string name)
+    public IType? GetType(string? name)
     {
+        if (name == null)
+        {
+            return null;
+        }
+
         buildInTypes.TryGetValue(name, out var type);
         if (type != null)
         {
