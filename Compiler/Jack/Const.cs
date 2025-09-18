@@ -120,7 +120,7 @@ public static class GrammerExtension
         //
         { Grammer.Expression, "Term (BinaryOp Term)*"},
         { Grammer.Term, "IntegerConstant | StringConstant | KeywordConstant | VarName | VarName '[' Expression ']' | SubroutineCall | '(' Expression ')' | UnaryOp Term"},
-        { Grammer.SubroutineCall, "SubroutineName '(' ExpressionList ')'"},
+        { Grammer.SubroutineCall, "((ClassName | VarName).)?SubroutineName '(' ExpressionList ')'"},
         { Grammer.ExpressionList, "(Expression (',' Expression)*)?"},
         { Grammer.BinaryOp, "'+' | '-' | '*' | '/' | '&' | '|' | '<' | '>' | '='"},
         { Grammer.UnaryOp, "'-' | '~'"},

@@ -8,4 +8,5 @@ namespace Jack;
 
 public interface IType
 {
+    string Name { get; }
 }

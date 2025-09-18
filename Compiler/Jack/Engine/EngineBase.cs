@@ -39,6 +39,14 @@ public class EngineBase : ICompilationEngine
 
     protected SymbolTable symbolTable = new();
 
+    protected string LastIdentifier { get; private set; } = string.Empty;
+
+    IType? lastType = null;
+    protected IType LastType
+    {
+        get => lastType ?? throw new ArgumentNullException(nameof(lastType));
+    }
+
     public EngineBase()
     {
     }
@@ -58,9 +66,15 @@ public class EngineBase : ICompilationEngine
 
         OnStart?.Invoke(this, EventArgs.Empty);
 
+        InitSymbolTable();
+
         CompileGammer(Grammer.Class);
 
         OnEnd?.Invoke(this, EventArgs.Empty);
+    }
+
+    void InitSymbolTable()
+    {
     }
 
     public void CompileGammer(Grammer grammer)
@@ -165,16 +179,26 @@ public class EngineBase : ICompilationEngine
     {
         MatchKeyword(Const.KEYWORD_CLASS);
         CompileGammer(Grammer.ClassName);
+
+        var symbol = new ClassSymbol(LastIdentifier);
+        Define(symbol, SymbolKind.Class);
+        symbolTable.PushScope(symbol);
+
         MatchSymbol(Const.SYMBOL_LEFT_BRACE);
+
         while (TryMatchGrammarClassVarDec(out _))
         {
             CompileGammer(Grammer.ClassVarDec);
         }
+
         while (TryMatchGrammarSubroutineDec(out _))
         {
             CompileGammer(Grammer.SubroutineDec);
         }
+
         MatchSymbol(Const.SYMBOL_RIGHT_BRACE);
+
+        symbolTable.PopScope();
     }
 
     protected bool TryMatchGrammarClassVarDec(out Parser.TokenInfo tokenInfo)
@@ -188,15 +212,20 @@ public class EngineBase : ICompilationEngine
 
     protected virtual void CompileClassVarDec()
     {
-        if (!TryMatchGrammarClassVarDec(out _))
+        if (!TryMatchGrammarClassVarDec(out var tokenInfo))
         {
             return;
         }
 
+        SymbolKind kind = tokenInfo.Token == Const.KEYWORD_STATIC ? SymbolKind.Static : SymbolKind.Field;
+
         Consume(); // static | field
 
         CompileGammer(Grammer.Type);
+
         CompileGammer(Grammer.VarName);
+
+        Define(new VariableSymbol(LastType, LastIdentifier), kind);
 
         Advandce();
         while (parser.TokenType() == ETokenType.Symbol && parser.Token() == Const.SYMBOL_COMMA)
@@ -208,6 +237,8 @@ public class EngineBase : ICompilationEngine
             //     CompileGammer(Grammer.Type);
             // }
             CompileGammer(Grammer.VarName);
+
+            Define(new VariableSymbol(LastType, LastIdentifier), kind);
 
             parser.Advandce();
         }
@@ -244,11 +275,32 @@ public class EngineBase : ICompilationEngine
 
         if (tokenInfo.TokenType == ETokenType.Keyword)
         {
+            SetLastType(symbolTable.GetType(tokenInfo.Token));
             Consume();
             return;
         }
 
         CompileGammer(Grammer.ClassName);
+
+        var type = symbolTable.GetType(LastIdentifier);
+        if (type == null)
+        {
+            // predefine type
+            var symbol = new ClassSymbol(LastIdentifier);
+            Define(symbol, SymbolKind.Class | SymbolKind.Other);
+            type = symbol;
+        }
+        SetLastType(type);
+    }
+
+    void SetLastType(IType? type)
+    {
+        if (type == null)
+        {
+            throw CreateException($"SetLastType failed: {nameof(type)} is null");
+        }
+
+        lastType = type;
     }
 
     protected bool TryMatchGrammarSubroutineDec(out Parser.TokenInfo tokenInfo)
@@ -268,6 +320,8 @@ public class EngineBase : ICompilationEngine
         }
         Consume();
 
+        symbolTable.StartSubroutine(LastIdentifier);
+
         if (TryMatchGroup(ETokenType.Keyword, out _, Const.KEYWORD_VOID))
         {
             Consume();
@@ -282,6 +336,8 @@ public class EngineBase : ICompilationEngine
         CompileGammer(Grammer.ParameterList);
         MatchSymbol(Const.SYMBOL_RIGHT_PARENTHESES);
         CompileGammer(Grammer.SubroutineBody);
+
+        symbolTable.EndSubroutine();
     }
 
     protected virtual void CompileParameterList()
@@ -291,14 +347,21 @@ public class EngineBase : ICompilationEngine
             return;
         }
 
+        SymbolKind kind = SymbolKind.Arg;
+
         CompileGammer(Grammer.Type);
         CompileGammer(Grammer.VarName);
 
+        Define(new VariableSymbol(LastType, LastIdentifier), kind);
+
         while (TryMatch(Const.SYMBOL_COMMA, ETokenType.Symbol))
         {
-            Consume();
+            Consume(); // ','
+
             CompileGammer(Grammer.Type);
             CompileGammer(Grammer.VarName);
+
+            Define(new VariableSymbol(LastType, LastIdentifier), kind);
         }
     }
 
@@ -316,29 +379,38 @@ public class EngineBase : ICompilationEngine
     protected virtual void CompileVarDec()
     {
         MatchKeyword(Const.KEYWORD_VAR);
+
+        SymbolKind kind = SymbolKind.Var;
+
         CompileGammer(Grammer.Type);
         CompileGammer(Grammer.VarName);
+
+        Define(new VariableSymbol(LastType, LastIdentifier), kind);
+
         while (TryMatch(Const.SYMBOL_COMMA, ETokenType.Symbol))
         {
-            Consume();
+            Consume(); // ','
             CompileGammer(Grammer.VarName);
+
+            Define(new VariableSymbol(LastType, LastIdentifier), kind);
         }
+
         MatchSymbol(Const.SYMBOL_SEMICOLON);
     }
 
     protected virtual void CompileClassName()
     {
-        MatchIdentifier();
+        CompileGammer(Grammer.Identifier);
     }
 
     protected virtual void CompileSubroutineName()
     {
-        MatchIdentifier();
+        CompileGammer(Grammer.Identifier);
     }
 
     protected virtual void CompileVarName()
     {
-        MatchIdentifier();
+        CompileGammer(Grammer.Identifier);
     }
 
     // 语句
@@ -512,11 +584,27 @@ public class EngineBase : ICompilationEngine
         parser.Peek(1, out var nextToken);
         if (nextToken.Token == Const.SYMBOL_DOT)
         {
-            CompileGammer(Grammer.Identifier); // className or varName
+            // SymbolKind kind = symbolTable.KindOf(parser.Token());
+            // if (kind.HasFlag(SymbolKind.Class))
+            // {
+            //     CompileClassName();
+            // }
+            // else if (kind.HasFlag(SymbolKind.Var))
+            // {
+            //     CompileVarName();
+            // }
+            // else
+            // {
+            //     throw CreateException($"CompileSubroutineCall failed: {parser.Token()} is not a var name or a class name");
+            // }
+
+            CompileGammer(Grammer.Identifier);
+
             MatchSymbol(Const.SYMBOL_DOT);
         }
 
         CompileGammer(Grammer.SubroutineName);
+
         MatchSymbol(Const.SYMBOL_LEFT_PARENTHESES);
         CompileGammer(Grammer.ExpressionList);
         MatchSymbol(Const.SYMBOL_RIGHT_PARENTHESES);
@@ -612,9 +700,11 @@ public class EngineBase : ICompilationEngine
             throw CreateException($"MatchIdentifier failed");
         }
 
+        LastIdentifier = parser.Token();
+
         Consume();
 
-        return parser.Token();
+        return LastIdentifier;
     }
 
     protected bool TryMatchIntegerConstant()
@@ -740,6 +830,11 @@ public class EngineBase : ICompilationEngine
         parser.Consume();
 
         OnConsume?.Invoke(this, new ConsumeEventArgs(parser.TokenType(), parser.Token()));
+    }
+
+    protected void Define(Symbol symbol, SymbolKind kind)
+    {
+        symbolTable.Define(symbol, kind);
     }
 
     protected CompileException CreateException(string message)

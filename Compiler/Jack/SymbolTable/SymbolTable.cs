@@ -9,7 +9,15 @@ namespace Jack;
 /// </summary>
 public class SymbolTable
 {
-    public record VarInfo(Symbol Symbol, WORD Index);
+    public record VarInfo(Symbol Symbol, SymbolKind Kind, WORD Index);
+
+    static readonly Dictionary<string, IType> buildInTypes = new()
+    {
+        { "void", new BuildInSymbol("void") },
+        { "int", new BuildInSymbol("int") },
+        { "char", new BuildInSymbol("char") },
+        { "boolean", new BuildInSymbol("boolean") },
+    };
 
     IScope currentScope = null!;
     Scope subroutineScope;
@@ -26,13 +34,18 @@ public class SymbolTable
     {
     }
 
-    void PushScope(IScope scope)
+    public void PushScope(IScope scope)
     {
+        if (scope == currentScope)
+        {
+            throw new ArgumentException("Cannot push the same scope twice");
+        }
+
         scope.EnclosingScope = currentScope;
         currentScope = scope;
     }
 
-    void PopScope()
+    public void PopScope()
     {
         foreach (var item in currentScope.Symbols)
         {
@@ -58,9 +71,9 @@ public class SymbolTable
     /// Static和Field标识符作用域为整个类，Arg和Var标识符作用域为当前子程序
     /// </summary>
     /// <param name="symbol"></param>
-    public void Define(Symbol symbol)
+    public void Define(Symbol symbol, SymbolKind kind)
     {
-        Define(new VarInfo(symbol, VarCount(symbol.Kind)));
+        Define(new VarInfo(symbol, kind, VarCount(kind)));
     }
 
     void Define(VarInfo symbol)
@@ -76,7 +89,19 @@ public class SymbolTable
     /// <returns></returns>
     public WORD VarCount(SymbolKind kind)
     {
-        return (WORD)currentScope.Symbols.Count(s => s.Kind == kind);
+        return (WORD)currentScope.Symbols.Count(s => KindOf(s) == kind);
+    }
+
+    public IType? GetType(string name)
+    {
+        buildInTypes.TryGetValue(name, out var type);
+        if (type != null)
+        {
+            return type;
+        }
+
+        var symbol = currentScope.Resolve(name);
+        return symbol?.Type ?? null;
     }
 
     /// <summary>
@@ -103,7 +128,19 @@ public class SymbolTable
     /// <returns></returns>
     public SymbolKind KindOf(string name)
     {
-        return GetVarInfo(name)?.Symbol.Kind ?? SymbolKind.Unknown;
+        var symbol = currentScope.Resolve(name);
+        if (symbol == null)
+        {
+            return SymbolKind.Unknown;
+        }
+
+        return KindOf(symbol);
+    }
+
+    public SymbolKind KindOf(Symbol symbol)
+    {
+        symbols.TryGetValue(symbol, out var info);
+        return info?.Kind ?? SymbolKind.Unknown;
     }
 
     /// <summary>
@@ -113,7 +150,7 @@ public class SymbolTable
     /// <returns></returns>
     public IType? TypeOf(string name)
     {
-        return GetVarInfo(name)?.Symbol.Type;
+        return GetVarInfo(name)?.Symbol?.Type;
     }
 
     /// <summary>
