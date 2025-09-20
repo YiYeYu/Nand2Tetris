@@ -32,12 +32,18 @@ public class EngineBase : ICompilationEngine
         public SymbolKind Kind { get; set; }
     }
 
+    public class EndDefineEventArgs : EventArgs
+    {
+        public EndDefineEventArgs(Symbol symbol) { Symbol = symbol; }
+        public Symbol Symbol { get; set; }
+    }
+
     public event EventHandler<EventArgs>? OnStart;
     public event EventHandler<EventArgs>? OnEnd;
     public event EventHandler<EventArgs>? OnAdvance;
     public event EventHandler<ConsumeEventArgs>? OnConsume;
     public event EventHandler<DefineEventArgs>? OnDefine;
-    public event EventHandler<EventArgs>? OnEndDefine;
+    public event EventHandler<EndDefineEventArgs>? OnEndDefine;
     public event EventHandler<GrammerEventArgs>? OnEnterGrammer;
     public event EventHandler<GrammerEventArgs>? OnLeaveGrammer;
 
@@ -64,36 +70,6 @@ public class EngineBase : ICompilationEngine
 
     public EngineBase()
     {
-        OnEnterGrammer += (_, e) => grammerStack.Push(e.Grammer);
-        OnLeaveGrammer += (_, e) => grammerStack.Pop();
-
-        OnDefine += (_, e) =>
-        {
-            switch (CurrentGrammer)
-            {
-                case Grammer.ClassVarDec:
-                    ClassSymbol? classSymbol = CurrentSymbol as ClassSymbol ?? throw new ArgumentNullException(nameof(CurrentSymbol));
-                    classSymbol.AddVariable(e.Symbol as VariableSymbol ?? throw new ArgumentNullException(nameof(e.Symbol)));
-                    break;
-                case Grammer.SubroutineDec:
-                    classSymbol = CurrentSymbol as ClassSymbol ?? throw new ArgumentNullException(nameof(CurrentSymbol));
-                    classSymbol.AddSubroutine(e.Symbol as SubroutineSymbol ?? throw new ArgumentNullException(nameof(e.Symbol)));
-                    break;
-                case Grammer.ParameterList:
-                    var subroutineSymbol = CurrentSymbol as SubroutineSymbol ?? throw new ArgumentNullException(nameof(CurrentSymbol));
-                    subroutineSymbol.AddArgument(e.Symbol as VariableSymbol ?? throw new ArgumentNullException(nameof(e.Symbol)));
-                    break;
-                case Grammer.VarDec:
-                    subroutineSymbol = CurrentSymbol as SubroutineSymbol ?? throw new ArgumentNullException(nameof(CurrentSymbol));
-                    subroutineSymbol.AddVariable(e.Symbol as VariableSymbol ?? throw new ArgumentNullException(nameof(e.Symbol)));
-                    break;
-                default:
-                    break;
-            }
-            symbolStack.Push(e.Symbol);
-        };
-
-        OnEndDefine += (_, _) => symbolStack.Pop();
     }
 
     ~EngineBase()
@@ -124,6 +100,7 @@ public class EngineBase : ICompilationEngine
 
     public void CompileGammer(Grammer grammer)
     {
+        grammerStack.Push(grammer);
         OnEnterGrammer?.Invoke(this, new GrammerEventArgs(grammer));
 
         switch (grammer)
@@ -214,6 +191,7 @@ public class EngineBase : ICompilationEngine
         }
 
         OnLeaveGrammer?.Invoke(this, new GrammerEventArgs(grammer));
+        grammerStack.Pop();
     }
 
     #region compile grammer
@@ -371,12 +349,12 @@ public class EngineBase : ICompilationEngine
 
         SymbolKind kind = kindTokenInfo.Token == Const.KEYWORD_CONSTRUCTOR ? SymbolKind.Constructor : kindTokenInfo.Token == Const.KEYWORD_FUNCTION ? SymbolKind.Function : SymbolKind.Method;
 
-        IType? returnType = null;
+        IType returnType = null!;
 
         if (TryMatchGroup(ETokenType.Keyword, out var typeToken, Const.KEYWORD_VOID))
         {
             Consume(); // void
-            returnType = symbolTable.GetType(typeToken);
+            returnType = SymbolTable.BuildInSymbolVoid;
         }
         else
         {
@@ -585,7 +563,7 @@ public class EngineBase : ICompilationEngine
 
         while (TryMatchGroup(ETokenType.Symbol, out _, Const.BinaryOps))
         {
-            Consume();
+            CompileGammer(Grammer.BinaryOp);
             CompileGammer(Grammer.Term);
         }
     }
@@ -634,7 +612,7 @@ public class EngineBase : ICompilationEngine
         }
         else if (TryMatchGroup(ETokenType.Symbol, out _, Const.UnaryOps))
         {
-            Consume();
+            CompileGammer(Grammer.UnaryOp);
             CompileGammer(Grammer.Term);
         }
         else
@@ -901,12 +879,42 @@ public class EngineBase : ICompilationEngine
     {
         symbolTable.Define(symbol, kind);
 
+        OnDefined(symbol, kind);
+
         OnDefine?.Invoke(this, new DefineEventArgs(symbol, kind));
+    }
+
+    void OnDefined(Symbol symbol, SymbolKind kind)
+    {
+        switch (CurrentGrammer)
+        {
+            case Grammer.ClassVarDec:
+                ClassSymbol? classSymbol = CurrentSymbol as ClassSymbol ?? throw new ArgumentNullException(nameof(CurrentSymbol));
+                classSymbol.AddVariable(symbol as VariableSymbol ?? throw new ArgumentNullException(nameof(symbol)));
+                break;
+            case Grammer.SubroutineDec:
+                classSymbol = CurrentSymbol as ClassSymbol ?? throw new ArgumentNullException(nameof(CurrentSymbol));
+                classSymbol.AddSubroutine(symbol as SubroutineSymbol ?? throw new ArgumentNullException(nameof(symbol)));
+                break;
+            case Grammer.ParameterList:
+                var subroutineSymbol = CurrentSymbol as SubroutineSymbol ?? throw new ArgumentNullException(nameof(CurrentSymbol));
+                subroutineSymbol.AddArgument(symbol as VariableSymbol ?? throw new ArgumentNullException(nameof(symbol)));
+                break;
+            case Grammer.VarDec:
+                subroutineSymbol = CurrentSymbol as SubroutineSymbol ?? throw new ArgumentNullException(nameof(CurrentSymbol));
+                subroutineSymbol.AddVariable(symbol as VariableSymbol ?? throw new ArgumentNullException(nameof(symbol)));
+                break;
+            default:
+                break;
+        }
+        symbolStack.Push(symbol);
     }
 
     protected void EndDefine()
     {
-        OnEndDefine?.Invoke(this, EventArgs.Empty);
+        OnEndDefine?.Invoke(this, new EndDefineEventArgs(CurrentSymbol));
+
+        symbolStack.Pop();
     }
 
     protected CompileException CreateException(string message)

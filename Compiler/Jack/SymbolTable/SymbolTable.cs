@@ -11,12 +11,17 @@ public class SymbolTable
 {
     public record VarInfo(Symbol Symbol, SymbolKind Kind, WORD Index);
 
+    public static readonly IType BuildInSymbolVoid = new BuildInSymbol("void");
+    public static readonly IType BuildInSymbolInt = new BuildInSymbol("int");
+    public static readonly IType BuildInSymbolChar = new BuildInSymbol("char");
+    public static readonly IType BuildInSymbolBoolean = new BuildInSymbol("boolean");
+
     static readonly Dictionary<string, IType> buildInTypes = new()
     {
-        { "void", new BuildInSymbol("void") },
-        { "int", new BuildInSymbol("int") },
-        { "char", new BuildInSymbol("char") },
-        { "boolean", new BuildInSymbol("boolean") },
+        { "void", BuildInSymbolVoid },
+        { "int", BuildInSymbolInt },
+        { "char", BuildInSymbolChar },
+        { "boolean", BuildInSymbolBoolean },
     };
 
     IScope currentScope = null!;
@@ -26,7 +31,7 @@ public class SymbolTable
 
     public SymbolTable()
     {
-        currentScope = new Scope("global");
+        currentScope = new Scope("");
         subroutineScope = new Scope("", currentScope);
     }
 

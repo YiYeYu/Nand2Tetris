@@ -136,14 +136,14 @@ public record class SubroutineSymbol : ScopedSymbol
     readonly List<VariableSymbol> arguments = new();
     readonly List<VariableSymbol> variables = new();
 
-    public SubroutineSymbol(string Name, IScope? enclosingScope = null, SymbolKind kind = SymbolKind.Unknown, ISymbolType? returnType = null) : base(null, Name, enclosingScope)
+    public SubroutineSymbol(string Name, IScope? enclosingScope, SymbolKind kind, ISymbolType returnType) : base(null, Name, enclosingScope)
     {
         Kind = kind;
         ReturnType = returnType;
     }
 
     public SymbolKind Kind { get; private set; }
-    public ISymbolType? ReturnType { get; set; }
+    public ISymbolType ReturnType { get; set; }
 
     public IList<VariableSymbol> Arguments => arguments;
     public IList<VariableSymbol> Variables => variables;
