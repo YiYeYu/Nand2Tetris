@@ -89,6 +89,9 @@ public enum Grammer
     Identifier,
     IntegerConstant,
     StringConstant,
+
+    Keyword,
+    Symbol,
 }
 
 public static class GrammerExtension

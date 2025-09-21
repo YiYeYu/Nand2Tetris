@@ -1,7 +1,7 @@
 
 namespace Jack;
 
-public class Engine : EngineBase, ICompilationEngine
+public class Engine : TreeEngine, ICompilationEngine
 {
     Code code = null!;
 
@@ -39,9 +39,6 @@ public class Engine : EngineBase, ICompilationEngine
         OnConsume += __onConsume;
         OnDefine += __onDefine;
         OnEndDefine += __onEndDefine;
-
-        OnEnterGrammer += __onEnterGrammer;
-        OnLeaveGrammer += __onLeaveGrammer;
     }
 
     #region event handler
@@ -81,8 +78,9 @@ public class Engine : EngineBase, ICompilationEngine
         // WriteCommand(ECommandType.C_PUSH, "constant", symbolTable.IndexOf(e.Symbol.Name).ToString());
     }
 
-    void __onEnterGrammer(object? sender, GrammerEventArgs e)
+    protected override void __onEnterGrammer(object? sender, GrammerEventArgs e)
     {
+        base.__onEnterGrammer(sender, e);
 
         if (e.Grammer == Grammer.Statements && grammerStack.Peek(1) == Grammer.SubroutineBody)
         {
@@ -104,7 +102,7 @@ public class Engine : EngineBase, ICompilationEngine
         }
     }
 
-    void __onLeaveGrammer(object? sender, GrammerEventArgs e)
+    protected override void __onLeaveGrammer(object? sender, GrammerEventArgs e)
     {
         switch (e.Grammer)
         {
@@ -173,6 +171,12 @@ public class Engine : EngineBase, ICompilationEngine
                         case "=":
                             op = "eq";
                             break;
+                        case "&":
+                            op = "and";
+                            break;
+                        case "|":
+                            op = "or";
+                            break;
                         default:
                             break;
                     }
@@ -190,9 +194,64 @@ public class Engine : EngineBase, ICompilationEngine
                 }
                 WriteCommand(ECommandType.C_RETURN, "", "");
                 break;
+            case Grammer.SubroutineCall:
+                OnLeaveSubroutineCall();
+                break;
             default:
                 break;
         }
+
+        base.__onLeaveGrammer(sender, e);
+    }
+
+    void OnLeaveSubroutineCall()
+    {
+        TreeNode node = PeekNode();
+
+        TreeNode? classNameNode = null, varNameNode = null;
+
+        int subroutineNameNodeIndex;
+
+        TreeNode nameNode = node.GetChild(0);
+        if (nameNode.Grammer == Grammer.SubroutineName)
+        {
+            subroutineNameNodeIndex = 0;
+        }
+        else if (nameNode.Grammer == Grammer.VarName)
+        {
+            varNameNode = nameNode;
+            subroutineNameNodeIndex = 2;
+        }
+        else if (nameNode.Grammer == Grammer.ClassName)
+        {
+            classNameNode = nameNode;
+            subroutineNameNodeIndex = 2;
+        }
+        else
+        {
+            throw CreateException($"subroutine call error, unexpected node {nameNode.Grammer}: {nameNode.Token}");
+        }
+
+        TreeNode subroutineNameNode = node.GetChild(subroutineNameNodeIndex);
+        TreeNode argNumNode = node.GetChild(subroutineNameNodeIndex + 1);
+
+        string className;
+        if (classNameNode != null)
+        {
+            className = classNameNode.Token;
+        }
+        else if (varNameNode != null)
+        {
+            className =
+            symbolTable.GetType(varNameNode.Token)?.Name!;
+        }
+        else
+        {
+            className = getCurrentClassSymbol().Name;
+        }
+
+        string fName = encodeFunctionName(className, subroutineNameNode.Token);
+        WriteCommand(ECommandType.C_CALL, fName, argNumNode.Children.Count.ToString());
     }
 
     #endregion
@@ -229,7 +288,7 @@ public class Engine : EngineBase, ICompilationEngine
 
     void WriteInfoComment()
     {
-        WriteComment($"grammar {CurrentGrammer}, symbol {CurrentSymbol}, depth {Depth}, token '{parser.Token()}', line {parser.CurrentLine}:{parser.CurrentColumn}\n");
+        // WriteComment($"grammar {CurrentGrammer}, symbol {CurrentSymbol}, depth {Depth}, token '{parser.Token()}', line {parser.CurrentLine}:{parser.CurrentColumn}\n");
     }
 
     void calExpression()
