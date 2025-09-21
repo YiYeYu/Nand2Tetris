@@ -373,7 +373,7 @@ public class EngineBase : ICompilationEngine
     {
         MatchKeyword(Const.KEYWORD_VAR);
 
-        SymbolKind kind = SymbolKind.Var;
+        SymbolKind kind = SymbolKind.Var | SymbolKind.Local;
 
         CompileGammer(Grammer.Type);
         CompileGammer(Grammer.VarName);
@@ -849,15 +849,15 @@ public class EngineBase : ICompilationEngine
         return new CompileException($"{parser.CurrentLine}:{parser.CurrentColumn}: token: {parser.Token()}({parser.TokenType()}), {message}");
     }
 
-    protected void Write(string str)
+    protected virtual void Write(string str)
     {
         writer.Write(str);
     }
 
     protected void WriteLine(string str)
     {
-        writer.Write(str);
-        writer.Write('\n');
+        Write(str);
+        Write("\n");
     }
 
     protected bool TryMatchGrammarClassVarDec(out Parser.TokenInfo tokenInfo)

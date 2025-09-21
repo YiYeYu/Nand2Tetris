@@ -1,9 +1,22 @@
 
+using System.Text;
+
 namespace Jack;
 
 public class Engine : TreeEngine, ICompilationEngine
 {
+    const string MEM_SEGMENT_ARGRUMENT = "argument";
+    const string MEM_SEGMENT_LOCAL = "local";
+    const string MEM_SEGMENT_STATIC = "static";
+    const string MEM_SEGMENT_CONSTANT = "constant";
+    const string MEM_SEGMENT_THIS = "this";
+    const string MEM_SEGMENT_THAT = "that";
+    const string MEM_SEGMENT_POINTER = "pointer";
+    const string MEM_SEGMENT_TEMP = "temp";
+
     Code code = null!;
+    StringBuilder stringBuilder = new();
+    StringBuilder? buffer = null;
 
     #region  indent
 
@@ -197,6 +210,12 @@ public class Engine : TreeEngine, ICompilationEngine
             case Grammer.SubroutineCall:
                 OnLeaveSubroutineCall();
                 break;
+            case Grammer.DoStatement:
+                WriteCommand(ECommandType.C_POP, "temp", "0");
+                break;
+            case Grammer.LetStatement:
+                OnLeveaLetStatement();
+                break;
             default:
                 break;
         }
@@ -233,7 +252,7 @@ public class Engine : TreeEngine, ICompilationEngine
         }
 
         TreeNode subroutineNameNode = node.GetChild(subroutineNameNodeIndex);
-        TreeNode argNumNode = node.GetChild(subroutineNameNodeIndex + 1);
+        TreeNode argNumNode = node.GetChild(subroutineNameNodeIndex + 2);
 
         string className;
         if (classNameNode != null)
@@ -251,13 +270,90 @@ public class Engine : TreeEngine, ICompilationEngine
         }
 
         string fName = encodeFunctionName(className, subroutineNameNode.Token);
-        WriteCommand(ECommandType.C_CALL, fName, argNumNode.Children.Count.ToString());
+        int argNum = (argNumNode.Children.Count + 1) / 2;
+        WriteCommand(ECommandType.C_CALL, fName, argNum.ToString());
+    }
+
+    void OnLeveaLetStatement()
+    {
+        TreeNode node = PeekNode();
+        TreeNode varNameNode = node.GetChild(1);
     }
 
     #endregion
 
     #region EngineBase
 
+    protected override void CompileLetStatement()
+    {
+        MatchKeyword(Const.KEYWORD_LET);
+
+        CompileGammer(Grammer.VarName);
+
+        string varName = LastIdentifier;
+        var varInfo = symbolTable.GetVarInfo(varName) ?? throw CreateException($"var '{varName}' not found");
+
+        string segment;
+        if (varInfo.Kind.HasFlag(SymbolKind.Static))
+        {
+            segment = MEM_SEGMENT_STATIC;
+        }
+        else if (varInfo.Kind.HasFlag(SymbolKind.Arg))
+        {
+            segment = MEM_SEGMENT_ARGRUMENT;
+        }
+        else if (varInfo.Kind.HasFlag(SymbolKind.Local))
+        {
+            segment = MEM_SEGMENT_LOCAL;
+        }
+        else if (varInfo.Kind.HasFlag(SymbolKind.Field))
+        {
+            segment = MEM_SEGMENT_THIS;
+        }
+        else
+        {
+            throw CreateException($"var '{varName}' invalid kind: {varInfo.Kind}");
+        }
+
+        bool isArray = TryMatch(Const.SYMBOL_LEFT_BRACKET, ETokenType.Symbol);
+        if (isArray)
+        {
+
+            WriteCommand(ECommandType.C_PUSH, segment, varInfo.Index.ToString());
+
+            MatchSymbol(Const.SYMBOL_LEFT_BRACKET);
+            CompileGammer(Grammer.Expression);
+            MatchSymbol(Const.SYMBOL_RIGHT_BRACKET);
+
+            WriteCommand(ECommandType.C_ARITHMETIC, "add", string.Empty);
+
+            // that = var[index]
+            WriteCommand(ECommandType.C_POP, MEM_SEGMENT_POINTER, "1");
+        }
+
+        MatchSymbol(Const.SYMBOL_EQUAL);
+        CompileGammer(Grammer.Expression);
+        MatchSymbol(Const.SYMBOL_SEMICOLON);
+
+        if (isArray)
+        {
+            WriteCommand(ECommandType.C_POP, MEM_SEGMENT_THAT, "0");
+        }
+        else
+        {
+            WriteCommand(ECommandType.C_POP, segment, varInfo.Index.ToString());
+        }
+    }
+
+    protected override void CompileIfStatement()
+    {
+        base.CompileIfStatement();
+    }
+
+    protected override void CompileWhileStatement()
+    {
+        base.CompileWhileStatement();
+    }
 
     #endregion
 
@@ -267,6 +363,43 @@ public class Engine : TreeEngine, ICompilationEngine
     ClassSymbol getCurrentClassSymbol() => symbolStack.Peek(1) as ClassSymbol ?? throw new ArgumentNullException(nameof(CurrentSymbol));
 
     string encodeFunctionName(string className, string name) => className + "." + name;
+
+    void EnableBuffer()
+    {
+        buffer = stringBuilder;
+        buffer.Clear();
+    }
+
+    string DisableBuffer(bool isAutoWrite = false)
+    {
+        if (buffer == null)
+        {
+            return string.Empty;
+        }
+
+        string str = buffer.ToString();
+
+        buffer = null;
+
+        if (isAutoWrite)
+        {
+            Write(str);
+        }
+
+        return str;
+    }
+
+
+    protected override void Write(string str)
+    {
+        if (buffer != null)
+        {
+            buffer.Append(str);
+            return;
+        }
+
+        base.Write(str);
+    }
 
     void WriteIndent()
     {
