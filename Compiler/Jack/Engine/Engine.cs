@@ -293,42 +293,12 @@ public class Engine : TreeEngine, ICompilationEngine
         string varName = LastIdentifier;
         var varInfo = symbolTable.GetVarInfo(varName) ?? throw CreateException($"var '{varName}' not found");
 
-        string segment;
-        if (varInfo.Kind.HasFlag(SymbolKind.Static))
-        {
-            segment = MEM_SEGMENT_STATIC;
-        }
-        else if (varInfo.Kind.HasFlag(SymbolKind.Arg))
-        {
-            segment = MEM_SEGMENT_ARGRUMENT;
-        }
-        else if (varInfo.Kind.HasFlag(SymbolKind.Local))
-        {
-            segment = MEM_SEGMENT_LOCAL;
-        }
-        else if (varInfo.Kind.HasFlag(SymbolKind.Field))
-        {
-            segment = MEM_SEGMENT_THIS;
-        }
-        else
-        {
-            throw CreateException($"var '{varName}' invalid kind: {varInfo.Kind}");
-        }
+        string segment = ParseSegment(varInfo);
 
         bool isArray = TryMatch(Const.SYMBOL_LEFT_BRACKET, ETokenType.Symbol);
         if (isArray)
         {
-
-            WriteCommand(ECommandType.C_PUSH, segment, varInfo.Index.ToString());
-
-            MatchSymbol(Const.SYMBOL_LEFT_BRACKET);
-            CompileGammer(Grammer.Expression);
-            MatchSymbol(Const.SYMBOL_RIGHT_BRACKET);
-
-            WriteCommand(ECommandType.C_ARITHMETIC, "add", string.Empty);
-
-            // that = var[index]
-            WriteCommand(ECommandType.C_POP, MEM_SEGMENT_POINTER, "1");
+            PrehandleArray(segment, varInfo);
         }
 
         MatchSymbol(Const.SYMBOL_EQUAL);
@@ -347,12 +317,123 @@ public class Engine : TreeEngine, ICompilationEngine
 
     protected override void CompileIfStatement()
     {
-        base.CompileIfStatement();
+        var ifLabel = GenAutoLabel();
+        var elseLabel = GenAutoLabel();
+        var endLabel = GenAutoLabel();
+
+        MatchKeyword(Const.KEYWORD_IF);
+        MatchSymbol(Const.SYMBOL_LEFT_PARENTHESES);
+        CompileGammer(Grammer.Expression);
+        WriteCommand(ECommandType.C_IF, ifLabel, string.Empty);
+        WriteCommand(ECommandType.C_GOTO, elseLabel, string.Empty);
+        MatchSymbol(Const.SYMBOL_RIGHT_PARENTHESES);
+
+        MatchSymbol(Const.SYMBOL_LEFT_BRACE);
+        WriteCommand(ECommandType.C_LABEL, ifLabel, string.Empty);
+        CompileGammer(Grammer.Statements);
+        WriteCommand(ECommandType.C_GOTO, endLabel, string.Empty);
+        MatchSymbol(Const.SYMBOL_RIGHT_BRACE);
+
+        WriteCommand(ECommandType.C_LABEL, elseLabel, string.Empty);
+
+        if (TryMatchGroup(ETokenType.Keyword, out _, Const.KEYWORD_ELSE))
+        {
+            MatchKeyword(Const.KEYWORD_ELSE);
+            MatchSymbol(Const.SYMBOL_LEFT_BRACE);
+            CompileGammer(Grammer.Statements);
+            MatchSymbol(Const.SYMBOL_RIGHT_BRACE);
+        }
+
+        WriteCommand(ECommandType.C_LABEL, endLabel, string.Empty);
     }
 
     protected override void CompileWhileStatement()
     {
-        base.CompileWhileStatement();
+        var startLabel = GenAutoLabel();
+        var endLabel = GenAutoLabel();
+
+        WriteCommand(ECommandType.C_LABEL, startLabel, string.Empty);
+
+        MatchKeyword(Const.KEYWORD_WHILE);
+        MatchSymbol(Const.SYMBOL_LEFT_PARENTHESES);
+        CompileGammer(Grammer.Expression);
+        WriteCommand(ECommandType.C_ARITHMETIC, "not", string.Empty);
+        WriteCommand(ECommandType.C_IF, endLabel, string.Empty);
+        MatchSymbol(Const.SYMBOL_RIGHT_PARENTHESES);
+        MatchSymbol(Const.SYMBOL_LEFT_BRACE);
+        CompileGammer(Grammer.Statements);
+        MatchSymbol(Const.SYMBOL_RIGHT_BRACE);
+
+        WriteCommand(ECommandType.C_GOTO, startLabel, string.Empty);
+
+        WriteCommand(ECommandType.C_LABEL, endLabel, string.Empty);
+    }
+
+    protected override void CompileTerm()
+    {
+        if (TryMatchTokenType(ETokenType.IntegerConstant))
+        {
+            CompileGammer(Grammer.IntegerConstant);
+        }
+        else if (TryMatchTokenType(ETokenType.StringConstant))
+        {
+            CompileGammer(Grammer.StringConstant);
+        }
+        else if (TryMatchGroup(ETokenType.Keyword, out _, Const.KeywordConstants))
+        {
+            CompileGammer(Grammer.KeywordConstant);
+        }
+        else if (TryMatchIdentifier())
+        {
+            parser.Peek(1, out var nextToken);
+            if (nextToken.Token == Const.SYMBOL_DOT)
+            {
+                CompileGammer(Grammer.SubroutineCall);
+            }
+            else if (nextToken.Token == Const.SYMBOL_LEFT_PARENTHESES)
+            {
+                CompileGammer(Grammer.SubroutineCall);
+            }
+            else
+            {
+                CompileGammer(Grammer.VarName);
+
+                string varName = LastIdentifier;
+                var varInfo = symbolTable.GetVarInfo(varName) ?? throw CreateException($"var '{varName}' not found");
+
+                string segment = ParseSegment(varInfo);
+
+                bool isArray = TryMatch(Const.SYMBOL_LEFT_BRACKET, ETokenType.Symbol);
+                if (isArray)
+                {
+                    PrehandleArray(segment, varInfo);
+                }
+
+                if (isArray)
+                {
+                    WriteCommand(ECommandType.C_PUSH, MEM_SEGMENT_THAT, "0");
+                }
+                else
+                {
+                    WriteCommand(ECommandType.C_PUSH, segment, varInfo.Index.ToString());
+                }
+            }
+        }
+        else if (TryMatch(Const.SYMBOL_LEFT_PARENTHESES, ETokenType.Symbol))
+        {
+            MatchSymbol(Const.SYMBOL_LEFT_PARENTHESES);
+            CompileGammer(Grammer.Expression);
+            MatchSymbol(Const.SYMBOL_RIGHT_PARENTHESES);
+        }
+        else if (TryMatchGroup(ETokenType.Symbol, out _, Const.UnaryOps))
+        {
+            CompileGammer(Grammer.UnaryOp);
+            CompileGammer(Grammer.Term);
+        }
+        else
+        {
+            throw CreateException($"CompileTerm failed");
+        }
     }
 
     #endregion
@@ -448,6 +529,55 @@ public class Engine : TreeEngine, ICompilationEngine
                 WriteCommand(ECommandType.C_ARITHMETIC, op, "");
             }
         }
+    }
+
+    const string SYS_AUTO_LABEL_FORMAT = "$SYS_AUTO_LABEL_{0}";
+    WORD autoLabelIndex = 0;
+
+    string GenAutoLabel()
+    {
+        return string.Format(SYS_AUTO_LABEL_FORMAT, autoLabelIndex++);
+    }
+
+    string ParseSegment(SymbolTable.VarInfo varInfo)
+    {
+        string segment;
+        if (varInfo.Kind.HasFlag(SymbolKind.Static))
+        {
+            segment = MEM_SEGMENT_STATIC;
+        }
+        else if (varInfo.Kind.HasFlag(SymbolKind.Arg))
+        {
+            segment = MEM_SEGMENT_ARGRUMENT;
+        }
+        else if (varInfo.Kind.HasFlag(SymbolKind.Local))
+        {
+            segment = MEM_SEGMENT_LOCAL;
+        }
+        else if (varInfo.Kind.HasFlag(SymbolKind.Field))
+        {
+            segment = MEM_SEGMENT_THIS;
+        }
+        else
+        {
+            throw CreateException($"var '{varInfo.Symbol.Name}' invalid kind: {varInfo.Kind}");
+        }
+
+        return segment;
+    }
+
+    void PrehandleArray(string segment, SymbolTable.VarInfo varInfo)
+    {
+        WriteCommand(ECommandType.C_PUSH, segment, varInfo.Index.ToString());
+
+        MatchSymbol(Const.SYMBOL_LEFT_BRACKET);
+        CompileGammer(Grammer.Expression);
+        MatchSymbol(Const.SYMBOL_RIGHT_BRACKET);
+
+        WriteCommand(ECommandType.C_ARITHMETIC, "add", string.Empty);
+
+        // that = var[index]
+        WriteCommand(ECommandType.C_POP, MEM_SEGMENT_POINTER, "1");
     }
 
     #endregion
