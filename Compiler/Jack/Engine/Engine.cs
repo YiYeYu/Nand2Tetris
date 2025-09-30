@@ -14,6 +14,8 @@ public class Engine : TreeEngine, ICompilationEngine
     const string MEM_SEGMENT_POINTER = "pointer";
     const string MEM_SEGMENT_TEMP = "temp";
 
+    const string VIRTUAL_OP_START_EXPRESSION = "startExpression";
+
     Code code = null!;
     StringBuilder stringBuilder = new();
     StringBuilder? buffer = null;
@@ -94,6 +96,15 @@ public class Engine : TreeEngine, ICompilationEngine
     protected override void __onEnterGrammer(object? sender, GrammerEventArgs e)
     {
         base.__onEnterGrammer(sender, e);
+        switch (e.Grammer)
+        {
+
+            case Grammer.Expression:
+                expressionStack.Push(VIRTUAL_OP_START_EXPRESSION);
+                break;
+            default:
+                break;
+        }
     }
 
     protected override void __onLeaveGrammer(object? sender, GrammerEventArgs e)
@@ -109,6 +120,7 @@ public class Engine : TreeEngine, ICompilationEngine
             case Grammer.StringConstant:
                 // String.new(length)创建字符串常量
                 // String.appendchar(nextchar)追加字符
+                OnStringConstant();
                 break;
             case Grammer.KeywordConstant:
                 switch (parser.Token())
@@ -204,6 +216,21 @@ public class Engine : TreeEngine, ICompilationEngine
         }
 
         base.__onLeaveGrammer(sender, e);
+    }
+
+    void OnStringConstant()
+    {
+        // String.new(length)创建字符串常量
+        // String.appendchar(nextchar)追加字符
+        var token = parser.Token();
+        var size = token.Length;
+        WriteCommand(ECommandType.C_PUSH, MEM_SEGMENT_CONSTANT, size.ToString());
+        WriteCommand(ECommandType.C_CALL, "String.new", "1");
+        for (int i = 0; i < size; i++)
+        {
+            WriteCommand(ECommandType.C_PUSH, "constant", ((int)token[i]).ToString());
+            WriteCommand(ECommandType.C_CALL, "String.appendChar", "2");
+        }
     }
 
     void OnLeaveSubroutineCall()
@@ -651,6 +678,11 @@ public class Engine : TreeEngine, ICompilationEngine
             else if (op == Const.SYMBOL_DIVIDE)
             {
                 WriteCommand(ECommandType.C_CALL, "Math.divide", "2");
+            }
+            else if (op == VIRTUAL_OP_START_EXPRESSION)
+            {
+                // do nothing, just finish a expression
+                break;
             }
             else
             {
