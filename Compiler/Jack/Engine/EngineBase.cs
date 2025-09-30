@@ -240,7 +240,7 @@ public class EngineBase : ICompilationEngine
 
         CompileGammer(Grammer.VarName);
 
-        Define(new VariableSymbol(LastType, LastIdentifier), kind);
+        Define(new VariableSymbol(LastType, LastIdentifier, kind), kind);
         EndDefine();
 
         Advandce();
@@ -254,7 +254,7 @@ public class EngineBase : ICompilationEngine
             // }
             CompileGammer(Grammer.VarName);
 
-            Define(new VariableSymbol(LastType, LastIdentifier), kind);
+            Define(new VariableSymbol(LastType, LastIdentifier, kind), kind);
             EndDefine();
 
             parser.Advandce();
@@ -343,7 +343,7 @@ public class EngineBase : ICompilationEngine
         CompileGammer(Grammer.Type);
         CompileGammer(Grammer.VarName);
 
-        Define(new VariableSymbol(LastType, LastIdentifier), kind);
+        Define(new VariableSymbol(LastType, LastIdentifier, kind), kind);
         EndDefine();
 
         while (TryMatch(Const.SYMBOL_COMMA, ETokenType.Symbol))
@@ -353,7 +353,7 @@ public class EngineBase : ICompilationEngine
             CompileGammer(Grammer.Type);
             CompileGammer(Grammer.VarName);
 
-            Define(new VariableSymbol(LastType, LastIdentifier), kind);
+            Define(new VariableSymbol(LastType, LastIdentifier, kind), kind);
             EndDefine();
         }
     }
@@ -378,7 +378,7 @@ public class EngineBase : ICompilationEngine
         CompileGammer(Grammer.Type);
         CompileGammer(Grammer.VarName);
 
-        Define(new VariableSymbol(LastType, LastIdentifier), kind);
+        Define(new VariableSymbol(LastType, LastIdentifier, kind), kind);
         EndDefine();
 
         while (TryMatch(Const.SYMBOL_COMMA, ETokenType.Symbol))
@@ -386,7 +386,7 @@ public class EngineBase : ICompilationEngine
             MatchSymbol(Const.SYMBOL_COMMA);
             CompileGammer(Grammer.VarName);
 
-            Define(new VariableSymbol(LastType, LastIdentifier), kind);
+            Define(new VariableSymbol(LastType, LastIdentifier, kind), kind);
             EndDefine();
         }
 

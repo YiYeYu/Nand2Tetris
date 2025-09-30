@@ -77,7 +77,7 @@ public record class BuildInSymbol : Symbol, ISymbolType
 
 public record class VariableSymbol : Symbol
 {
-    public VariableSymbol(ISymbolType Type, string Name, SymbolKind kind = SymbolKind.Unknown) : base(Type, Name) { Kind = kind; }
+    public VariableSymbol(ISymbolType Type, string Name, SymbolKind kind) : base(Type, Name) { Kind = kind; }
 
     public SymbolKind Kind { get; private set; }
 }

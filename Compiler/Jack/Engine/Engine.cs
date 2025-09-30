@@ -94,38 +94,21 @@ public class Engine : TreeEngine, ICompilationEngine
     protected override void __onEnterGrammer(object? sender, GrammerEventArgs e)
     {
         base.__onEnterGrammer(sender, e);
-
-        if (e.Grammer == Grammer.Statements && grammerStack.Peek(1) == Grammer.SubroutineBody)
-        {
-            // 函数定义中的语句，刚定义完所有变量
-            var subroutineSymbol = getCurrentSubroutineSymbol();
-            var classSymbol = getCurrentClassSymbol();
-
-            string fName = encodeFunctionName(classSymbol.Name, subroutineSymbol.Name);
-
-            int nLocalNum = subroutineSymbol.Variables.Count;
-            if (subroutineSymbol.Kind.HasFlag(SymbolKind.Method))
-            {
-                nLocalNum += 1;
-            }
-
-            WriteCommand(ECommandType.C_FUNCTION, fName, nLocalNum.ToString());
-
-            Depth++;
-        }
     }
 
     protected override void __onLeaveGrammer(object? sender, GrammerEventArgs e)
     {
         switch (e.Grammer)
         {
-            case Grammer.SubroutineBody:
-                Depth--;
-                break;
+            // case Grammer.SubroutineBody:
+            //     Depth--;
+            //     break;
             case Grammer.IntegerConstant:
                 WriteCommand(ECommandType.C_PUSH, "constant", parser.Token());
                 break;
             case Grammer.StringConstant:
+                // String.new(length)创建字符串常量
+                // String.appendchar(nextchar)追加字符
                 break;
             case Grammer.KeywordConstant:
                 switch (parser.Token())
@@ -208,7 +191,7 @@ public class Engine : TreeEngine, ICompilationEngine
                 WriteCommand(ECommandType.C_RETURN, "", "");
                 break;
             case Grammer.SubroutineCall:
-                OnLeaveSubroutineCall();
+                // OnLeaveSubroutineCall();
                 break;
             case Grammer.DoStatement:
                 WriteCommand(ECommandType.C_POP, "temp", "0");
@@ -252,7 +235,6 @@ public class Engine : TreeEngine, ICompilationEngine
         }
 
         TreeNode subroutineNameNode = node.GetChild(subroutineNameNodeIndex);
-        TreeNode argNumNode = node.GetChild(subroutineNameNodeIndex + 2);
 
         string className;
         if (classNameNode != null)
@@ -270,7 +252,10 @@ public class Engine : TreeEngine, ICompilationEngine
         }
 
         string fName = encodeFunctionName(className, subroutineNameNode.Token);
+
+        TreeNode argNumNode = node.GetChild(subroutineNameNodeIndex + 2);
         int argNum = (argNumNode.Children.Count + 1) / 2;
+
         WriteCommand(ECommandType.C_CALL, fName, argNum.ToString());
     }
 
@@ -283,6 +268,58 @@ public class Engine : TreeEngine, ICompilationEngine
     #endregion
 
     #region EngineBase
+
+    protected override void CompileSubroutineBody()
+    {
+
+        MatchSymbol(Const.SYMBOL_LEFT_BRACE);
+        while (TryMatchGroup(ETokenType.Keyword, out _, Const.KEYWORD_VAR))
+        {
+            CompileGammer(Grammer.VarDec);
+        }
+
+        // 函数定义中的语句，刚定义完所有变量
+        var subroutineSymbol = getCurrentSubroutineSymbol();
+        var classSymbol = getCurrentClassSymbol();
+
+        string fName = encodeFunctionName(classSymbol.Name, subroutineSymbol.Name);
+
+        int nLocalNum = subroutineSymbol.Variables.Count;
+        if (subroutineSymbol.Kind.HasFlag(SymbolKind.Method))
+        {
+            nLocalNum += 1;
+        }
+
+        WriteCommand(ECommandType.C_FUNCTION, fName, nLocalNum.ToString());
+
+        Depth++;
+
+        if (subroutineSymbol.Kind.HasFlag(SymbolKind.Constructor))
+        {
+            // 利用Memory.alloc(size)分配新空间
+
+            // pointer0 = this
+            var size = classSymbol.Variables.Count(v => v.Kind.HasFlag(SymbolKind.Field));
+
+            Console.WriteLine($"class {classSymbol.Name} size: {size}, vars: {string.Join(", ", classSymbol.Variables.Select(v => v.Name))}, kinds: {string.Join(", ", classSymbol.Variables.Select(v => v.Kind))}");
+
+            WriteCommand(ECommandType.C_PUSH, "constant", size.ToString());
+            WriteCommand(ECommandType.C_CALL, "Memory.alloc", "1");
+
+            WriteCommand(ECommandType.C_POP, MEM_SEGMENT_POINTER, "0");
+        }
+        else if (subroutineSymbol.Kind.HasFlag(SymbolKind.Method))
+        {
+            WriteCommand(ECommandType.C_PUSH, MEM_SEGMENT_ARGRUMENT, "0");
+            WriteCommand(ECommandType.C_POP, MEM_SEGMENT_POINTER, "0");
+        }
+
+
+        CompileGammer(Grammer.Statements);
+        MatchSymbol(Const.SYMBOL_RIGHT_BRACE);
+
+        Depth--;
+    }
 
     protected override void CompileLetStatement()
     {
@@ -434,6 +471,97 @@ public class Engine : TreeEngine, ICompilationEngine
         {
             throw CreateException($"CompileTerm failed");
         }
+    }
+
+    protected override void CompileSubroutineCall()
+    {
+        Advandce();
+        parser.Peek(1, out var nextToken);
+        if (nextToken.Token == Const.SYMBOL_DOT)
+        {
+            SymbolKind kind = symbolTable.KindOf(parser.Token());
+            if (kind.HasFlag(SymbolKind.Var))
+            {
+                CompileGammer(Grammer.VarName);
+            }
+            else //if (kind.HasFlag(SymbolKind.Class))
+            {
+                CompileGammer(Grammer.ClassName);
+            }
+
+            MatchSymbol(Const.SYMBOL_DOT);
+        }
+
+        CompileGammer(Grammer.SubroutineName);
+
+
+        TreeNode node = PeekNode();
+
+        TreeNode? classNameNode = null, varNameNode = null;
+
+        int subroutineNameNodeIndex;
+
+        TreeNode nameNode = node.GetChild(0);
+        if (nameNode.Grammer == Grammer.SubroutineName)
+        {
+            subroutineNameNodeIndex = 0;
+        }
+        else if (nameNode.Grammer == Grammer.VarName)
+        {
+            varNameNode = nameNode;
+            subroutineNameNodeIndex = 2;
+        }
+        else if (nameNode.Grammer == Grammer.ClassName)
+        {
+            classNameNode = nameNode;
+            subroutineNameNodeIndex = 2;
+        }
+        else
+        {
+            throw CreateException($"subroutine call error, unexpected node {nameNode.Grammer}: {nameNode.Token}");
+        }
+
+        TreeNode subroutineNameNode = node.GetChild(subroutineNameNodeIndex);
+
+        bool needSelf = false;
+
+        string className;
+        if (classNameNode != null)
+        {
+            className = classNameNode.Token;
+        }
+        else if (varNameNode != null)
+        {
+            className =
+            symbolTable.GetType(varNameNode.Token)?.Name!;
+
+            var varInfo =
+            symbolTable.GetVarInfo(varNameNode.Token)!;
+            var segment = ParseSegment(varInfo);
+            var idx = varInfo.Index;
+            WriteCommand(ECommandType.C_PUSH, segment, idx.ToString());
+            needSelf = true;
+        }
+        else
+        {
+            className = getCurrentClassSymbol().Name;
+            WriteCommand(ECommandType.C_PUSH, MEM_SEGMENT_POINTER, "0");
+            needSelf = true;
+        }
+
+        MatchSymbol(Const.SYMBOL_LEFT_PARENTHESES);
+        CompileGammer(Grammer.ExpressionList);
+        MatchSymbol(Const.SYMBOL_RIGHT_PARENTHESES);
+
+        string fName = encodeFunctionName(className, subroutineNameNode.Token);
+        TreeNode argNumNode = node.GetChild(subroutineNameNodeIndex + 2);
+        int argNum = (argNumNode.Children.Count + 1) / 2;
+        if (needSelf)
+        {
+            argNum++;
+        }
+
+        WriteCommand(ECommandType.C_CALL, fName, argNum.ToString());
     }
 
     #endregion
