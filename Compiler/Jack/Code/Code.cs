@@ -33,9 +33,18 @@ public class Code
         {ECommandType.C_RETURN, WriteReturn},
     };
 
-    readonly StreamWriter writer;
+    TextWriter writer;
+    public TextWriter Writer
+    {
+        get => writer;
+        set
+        {
+            writer.Flush();
+            writer = value ?? throw new ArgumentNullException(nameof(value));
+        }
+    }
 
-    public Code(StreamWriter writer)
+    public Code(TextWriter writer)
     {
         this.writer = writer;
     }

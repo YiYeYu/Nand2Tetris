@@ -93,7 +93,7 @@ public class TreeEngine : EngineBase, ICompilationEngine
 
     public TreeNode? Root
     { get; private set; }
-    List<TreeNode> nodeStack = new();
+    protected List<TreeNode> nodeStack = new();
 
     public TreeEngine()
     {
@@ -231,7 +231,7 @@ public class TreeEngine : EngineBase, ICompilationEngine
         return node;
     }
 
-    protected TreeNode PopNode()
+    protected virtual TreeNode PopNode()
     {
         TreeNode node = nodeStack.Pop();
 

@@ -15,10 +15,10 @@ public class Engine : TreeEngine, ICompilationEngine
     const string MEM_SEGMENT_TEMP = "temp";
 
     const string VIRTUAL_OP_START_EXPRESSION = "startExpression";
+    const string VIRTUAL_OP_START_TERM = "startTerm";
 
     Code code = null!;
-    StringBuilder stringBuilder = new();
-    StringBuilder? buffer = null;
+    StringWriter buffer = new();
 
     #region  indent
 
@@ -101,6 +101,9 @@ public class Engine : TreeEngine, ICompilationEngine
 
             case Grammer.Expression:
                 expressionStack.Push(VIRTUAL_OP_START_EXPRESSION);
+                break;
+            case Grammer.Term:
+                expressionStack.Push(VIRTUAL_OP_START_TERM);
                 break;
             default:
                 break;
@@ -192,6 +195,9 @@ public class Engine : TreeEngine, ICompilationEngine
                 }
                 break;
             case Grammer.Term:
+                calTerm();
+                break;
+            case Grammer.Expression:
                 calExpression();
                 break;
             case Grammer.ReturnStatement:
@@ -350,7 +356,10 @@ public class Engine : TreeEngine, ICompilationEngine
 
     protected override void CompileLetStatement()
     {
+        // let 表达式先求右值，再求左值
         MatchKeyword(Const.KEYWORD_LET);
+
+        EnableBuffer();
 
         CompileGammer(Grammer.VarName);
 
@@ -365,9 +374,13 @@ public class Engine : TreeEngine, ICompilationEngine
             PrehandleArray(segment, varInfo);
         }
 
+        var cacheStr = DisableBuffer();
+
         MatchSymbol(Const.SYMBOL_EQUAL);
         CompileGammer(Grammer.Expression);
         MatchSymbol(Const.SYMBOL_SEMICOLON);
+
+        Write(cacheStr);
 
         if (isArray)
         {
@@ -602,20 +615,25 @@ public class Engine : TreeEngine, ICompilationEngine
 
     void EnableBuffer()
     {
-        buffer = stringBuilder;
-        buffer.Clear();
+        if (code == null || code.Writer == buffer)
+        {
+            return;
+        }
+
+        buffer.GetStringBuilder().Clear();
+        code.Writer = buffer;
     }
 
     string DisableBuffer(bool isAutoWrite = false)
     {
-        if (buffer == null)
+        if (code?.Writer != buffer)
         {
             return string.Empty;
         }
 
         string str = buffer.ToString();
 
-        buffer = null;
+        code.Writer = writer;
 
         if (isAutoWrite)
         {
@@ -625,12 +643,11 @@ public class Engine : TreeEngine, ICompilationEngine
         return str;
     }
 
-
     protected override void Write(string str)
     {
-        if (buffer != null)
+        if (code?.Writer == buffer)
         {
-            buffer.Append(str);
+            buffer.Write(str);
             return;
         }
 
@@ -660,12 +677,43 @@ public class Engine : TreeEngine, ICompilationEngine
         // WriteComment($"grammar {CurrentGrammer}, symbol {CurrentSymbol}, depth {Depth}, token '{parser.Token()}', line {parser.CurrentLine}:{parser.CurrentColumn}\n");
     }
 
+    void calTerm()
+    {
+        while (!expressionStack.Empty())
+        {
+            var op = expressionStack.Peek();
+            if (op == Const.SYMBOL_LEFT_PARENTHESES || op == VIRTUAL_OP_START_EXPRESSION)
+            {
+                break;
+            }
+
+            expressionStack.Pop();
+            if (op == Const.SYMBOL_MULTIPLY)
+            {
+                WriteCommand(ECommandType.C_CALL, "Math.multiply", "2");
+            }
+            else if (op == Const.SYMBOL_DIVIDE)
+            {
+                WriteCommand(ECommandType.C_CALL, "Math.divide", "2");
+            }
+            else if (op == VIRTUAL_OP_START_TERM)
+            {
+                // do nothing, just finish a term
+                break;
+            }
+            else
+            {
+                WriteCommand(ECommandType.C_ARITHMETIC, op, "");
+            }
+        }
+    }
+
     void calExpression()
     {
         while (!expressionStack.Empty())
         {
             var op = expressionStack.Peek();
-            if (op == Const.SYMBOL_LEFT_PARENTHESES)
+            if (op == Const.SYMBOL_LEFT_PARENTHESES || op == Const.SYMBOL_LEFT_BRACKET)
             {
                 break;
             }
@@ -728,16 +776,27 @@ public class Engine : TreeEngine, ICompilationEngine
 
     void PrehandleArray(string segment, SymbolTable.VarInfo varInfo)
     {
-        WriteCommand(ECommandType.C_PUSH, segment, varInfo.Index.ToString());
-
         MatchSymbol(Const.SYMBOL_LEFT_BRACKET);
+        expressionStack.Push(Const.SYMBOL_LEFT_BRACKET);
         CompileGammer(Grammer.Expression);
+        expressionStack.Pop();
         MatchSymbol(Const.SYMBOL_RIGHT_BRACKET);
+
+        WriteCommand(ECommandType.C_PUSH, segment, varInfo.Index.ToString());
 
         WriteCommand(ECommandType.C_ARITHMETIC, "add", string.Empty);
 
         // that = var[index]
         WriteCommand(ECommandType.C_POP, MEM_SEGMENT_POINTER, "1");
+    }
+
+    protected override TreeNode PopNode()
+    {
+        TreeNode node = nodeStack.Peek();
+
+        Console.WriteLine($"PopNode: {node.Grammer}, {node.Token}, parent {SafePeekNode()?.Grammer}, {SafePeekNode()?.Token}, expressionStack [{string.Join(", ", expressionStack)}]");
+
+        return base.PopNode();
     }
 
     #endregion
