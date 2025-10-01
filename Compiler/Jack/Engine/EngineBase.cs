@@ -321,6 +321,14 @@ public class EngineBase : ICompilationEngine
         var symbol = new SubroutineSymbol(LastIdentifier, null, kind, returnType);
         Define(symbol, kind);
 
+        // if (kind.HasFlag(SymbolKind.Method))
+        // {
+        //     var thisSymbol = new VariableSymbol(returnType, "this", SymbolKind.Arg);
+        //     Define(thisSymbol, SymbolKind.Arg);
+        //     symbol.AddArgument(thisSymbol);
+        //     EndDefine();
+        // }
+
         MatchSymbol(Const.SYMBOL_LEFT_PARENTHESES);
         CompileGammer(Grammer.ParameterList);
         MatchSymbol(Const.SYMBOL_RIGHT_PARENTHESES);

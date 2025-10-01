@@ -5,7 +5,7 @@ namespace Jack;
 
 public class Engine : TreeEngine, ICompilationEngine
 {
-    const string MEM_SEGMENT_ARGRUMENT = "argument";
+    const string MEM_SEGMENT_ARGUMENT = "argument";
     const string MEM_SEGMENT_LOCAL = "local";
     const string MEM_SEGMENT_STATIC = "static";
     const string MEM_SEGMENT_CONSTANT = "constant";
@@ -302,6 +302,44 @@ public class Engine : TreeEngine, ICompilationEngine
 
     #region EngineBase
 
+    protected override void CompileParameterList()
+    {
+        SymbolKind kind = SymbolKind.Arg;
+
+        var symbol = getCurrentSubroutineSymbol();
+        var subroutineKind = symbol.Kind;
+
+        if (subroutineKind.HasFlag(SymbolKind.Method))
+        {
+            var thisSymbol = new VariableSymbol(getCurrentClassSymbol(), "this", kind);
+            Define(thisSymbol, kind);
+            // symbol.AddArgument(thisSymbol);
+            EndDefine();
+        }
+
+        if (!TryMatchGrammarType(out _))
+        {
+            return;
+        }
+
+        CompileGammer(Grammer.Type);
+        CompileGammer(Grammer.VarName);
+
+        Define(new VariableSymbol(LastType, LastIdentifier, kind), kind);
+        EndDefine();
+
+        while (TryMatch(Const.SYMBOL_COMMA, ETokenType.Symbol))
+        {
+            MatchSymbol(Const.SYMBOL_COMMA);
+
+            CompileGammer(Grammer.Type);
+            CompileGammer(Grammer.VarName);
+
+            Define(new VariableSymbol(LastType, LastIdentifier, kind), kind);
+            EndDefine();
+        }
+    }
+
     protected override void CompileSubroutineBody()
     {
 
@@ -318,10 +356,10 @@ public class Engine : TreeEngine, ICompilationEngine
         string fName = encodeFunctionName(classSymbol.Name, subroutineSymbol.Name);
 
         int nLocalNum = subroutineSymbol.Variables.Count;
-        if (subroutineSymbol.Kind.HasFlag(SymbolKind.Method))
-        {
-            nLocalNum += 1;
-        }
+        // if (subroutineSymbol.Kind.HasFlag(SymbolKind.Method))
+        // {
+        //     nLocalNum += 1;
+        // }
 
         WriteCommand(ECommandType.C_FUNCTION, fName, nLocalNum.ToString());
 
@@ -343,7 +381,7 @@ public class Engine : TreeEngine, ICompilationEngine
         }
         else if (subroutineSymbol.Kind.HasFlag(SymbolKind.Method))
         {
-            WriteCommand(ECommandType.C_PUSH, MEM_SEGMENT_ARGRUMENT, "0");
+            WriteCommand(ECommandType.C_PUSH, MEM_SEGMENT_ARGUMENT, "0");
             WriteCommand(ECommandType.C_POP, MEM_SEGMENT_POINTER, "0");
         }
 
@@ -756,7 +794,7 @@ public class Engine : TreeEngine, ICompilationEngine
         }
         else if (varInfo.Kind.HasFlag(SymbolKind.Arg))
         {
-            segment = MEM_SEGMENT_ARGRUMENT;
+            segment = MEM_SEGMENT_ARGUMENT;
         }
         else if (varInfo.Kind.HasFlag(SymbolKind.Local))
         {
