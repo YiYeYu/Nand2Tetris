@@ -1,0 +1,201 @@
+function SquareGame.new 0
+  push constant 2
+  call Memory.alloc 1
+  pop pointer 0
+  push constant 0
+  push constant 0
+  push constant 30
+  call Square.new 3
+  pop this 0
+  push constant 0
+  pop this 1
+  push pointer 0
+  return
+function SquareGame.dispose 1
+  push argument 0
+  pop pointer 0
+  push this 0
+  call Square.dispose 1
+  pop temp 0
+  push pointer 0
+  call Memory.deAlloc 1
+  pop temp 0
+  push constant 0
+  return
+function SquareGame.moveSquare 1
+  push argument 0
+  pop pointer 0
+  push this 1
+  push constant 1
+  eq
+  if-goto $SYS_AUTO_LABEL_18
+  goto $SYS_AUTO_LABEL_19
+  label $SYS_AUTO_LABEL_18
+  push this 0
+  call Square.moveUp 1
+  pop temp 0
+  goto $SYS_AUTO_LABEL_20
+  label $SYS_AUTO_LABEL_19
+  label $SYS_AUTO_LABEL_20
+  push this 1
+  push constant 2
+  eq
+  if-goto $SYS_AUTO_LABEL_21
+  goto $SYS_AUTO_LABEL_22
+  label $SYS_AUTO_LABEL_21
+  push this 0
+  call Square.moveDown 1
+  pop temp 0
+  goto $SYS_AUTO_LABEL_23
+  label $SYS_AUTO_LABEL_22
+  label $SYS_AUTO_LABEL_23
+  push this 1
+  push constant 3
+  eq
+  if-goto $SYS_AUTO_LABEL_24
+  goto $SYS_AUTO_LABEL_25
+  label $SYS_AUTO_LABEL_24
+  push this 0
+  call Square.moveLeft 1
+  pop temp 0
+  goto $SYS_AUTO_LABEL_26
+  label $SYS_AUTO_LABEL_25
+  label $SYS_AUTO_LABEL_26
+  push this 1
+  push constant 4
+  eq
+  if-goto $SYS_AUTO_LABEL_27
+  goto $SYS_AUTO_LABEL_28
+  label $SYS_AUTO_LABEL_27
+  push this 0
+  call Square.moveRight 1
+  pop temp 0
+  goto $SYS_AUTO_LABEL_29
+  label $SYS_AUTO_LABEL_28
+  label $SYS_AUTO_LABEL_29
+  push constant 5
+  call Sys.wait 1
+  pop temp 0
+  push constant 0
+  return
+function SquareGame.run 3
+  push argument 0
+  pop pointer 0
+  push constant 0
+  pop local 1
+  label $SYS_AUTO_LABEL_30
+  push local 1
+  not
+  not
+  if-goto $SYS_AUTO_LABEL_31
+  label $SYS_AUTO_LABEL_32
+  push local 0
+  push constant 0
+  eq
+  not
+  if-goto $SYS_AUTO_LABEL_33
+  call Keyboard.keyPressed 0
+  pop local 0
+  push pointer 0
+  call SquareGame.moveSquare 1
+  pop temp 0
+  goto $SYS_AUTO_LABEL_32
+  label $SYS_AUTO_LABEL_33
+  push local 0
+  push constant 81
+  eq
+  if-goto $SYS_AUTO_LABEL_34
+  goto $SYS_AUTO_LABEL_35
+  label $SYS_AUTO_LABEL_34
+  push constant 0
+  not
+  pop local 1
+  goto $SYS_AUTO_LABEL_36
+  label $SYS_AUTO_LABEL_35
+  label $SYS_AUTO_LABEL_36
+  push local 0
+  push constant 90
+  eq
+  if-goto $SYS_AUTO_LABEL_37
+  goto $SYS_AUTO_LABEL_38
+  label $SYS_AUTO_LABEL_37
+  push this 0
+  call Square.decSize 1
+  pop temp 0
+  goto $SYS_AUTO_LABEL_39
+  label $SYS_AUTO_LABEL_38
+  label $SYS_AUTO_LABEL_39
+  push local 0
+  push constant 88
+  eq
+  if-goto $SYS_AUTO_LABEL_40
+  goto $SYS_AUTO_LABEL_41
+  label $SYS_AUTO_LABEL_40
+  push this 0
+  call Square.incSize 1
+  pop temp 0
+  goto $SYS_AUTO_LABEL_42
+  label $SYS_AUTO_LABEL_41
+  label $SYS_AUTO_LABEL_42
+  push local 0
+  push constant 131
+  eq
+  if-goto $SYS_AUTO_LABEL_43
+  goto $SYS_AUTO_LABEL_44
+  label $SYS_AUTO_LABEL_43
+  push constant 1
+  pop this 1
+  goto $SYS_AUTO_LABEL_45
+  label $SYS_AUTO_LABEL_44
+  label $SYS_AUTO_LABEL_45
+  push local 0
+  push constant 133
+  eq
+  if-goto $SYS_AUTO_LABEL_46
+  goto $SYS_AUTO_LABEL_47
+  label $SYS_AUTO_LABEL_46
+  push constant 2
+  pop this 1
+  goto $SYS_AUTO_LABEL_48
+  label $SYS_AUTO_LABEL_47
+  label $SYS_AUTO_LABEL_48
+  push local 0
+  push constant 130
+  eq
+  if-goto $SYS_AUTO_LABEL_49
+  goto $SYS_AUTO_LABEL_50
+  label $SYS_AUTO_LABEL_49
+  push constant 3
+  pop this 1
+  goto $SYS_AUTO_LABEL_51
+  label $SYS_AUTO_LABEL_50
+  label $SYS_AUTO_LABEL_51
+  push local 0
+  push constant 132
+  eq
+  if-goto $SYS_AUTO_LABEL_52
+  goto $SYS_AUTO_LABEL_53
+  label $SYS_AUTO_LABEL_52
+  push constant 4
+  pop this 1
+  goto $SYS_AUTO_LABEL_54
+  label $SYS_AUTO_LABEL_53
+  label $SYS_AUTO_LABEL_54
+  label $SYS_AUTO_LABEL_55
+  push local 0
+  push constant 0
+  eq
+  not
+  not
+  if-goto $SYS_AUTO_LABEL_56
+  call Keyboard.keyPressed 0
+  pop local 0
+  push pointer 0
+  call SquareGame.moveSquare 1
+  pop temp 0
+  goto $SYS_AUTO_LABEL_55
+  label $SYS_AUTO_LABEL_56
+  goto $SYS_AUTO_LABEL_30
+  label $SYS_AUTO_LABEL_31
+  push constant 0
+  return

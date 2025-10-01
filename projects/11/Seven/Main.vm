@@ -1,0 +1,24 @@
+/* grammar Statements, symbol (subroutine:main), depth 0, token 'do', line 11:9
+ */
+function Main.main 0
+  /* grammar IntegerConstant, symbol (subroutine:main), depth 1, token '1', line 11:27
+ */
+  push constant 1
+  /* grammar IntegerConstant, symbol (subroutine:main), depth 1, token '2', line 11:32
+ */
+  push constant 2
+  /* grammar IntegerConstant, symbol (subroutine:main), depth 1, token '3', line 11:35
+ */
+  push constant 3
+  /* grammar Term, symbol (subroutine:main), depth 1, token '3', line 11:35
+ */
+  call Math.multiply 2
+  /* grammar Term, symbol (subroutine:main), depth 1, token ')', line 11:36
+ */
+  add
+  /* grammar ReturnStatement, symbol (subroutine:main), depth 1, token ';', line 13:3
+ */
+  push constant 0
+  /* grammar ReturnStatement, symbol (subroutine:main), depth 1, token ';', line 13:3
+ */
+  return
